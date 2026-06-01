@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:formbricks_flutter/formbricks_flutter.dart';
 
+const kWelcomeMessage = 'Welcome to Formbricks';
+
 void main() {
   runApp(const PlaygroundApp());
 }
@@ -41,7 +43,7 @@ class PlaygroundHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Proves the SDK package links into the app via the pub workspace.
-    final greeting = welcome();
+    final greeting = kWelcomeMessage;
 
     final actions = <({String label, String action})>[
       (label: 'Trigger Code Action', action: "track('code')"),
@@ -55,22 +57,24 @@ class PlaygroundHome extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Formbricks Flutter Playground')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(greeting, textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              for (final a in actions) ...[
-                FilledButton(
-                  onPressed: () => _stub(context, a.action),
-                  child: Text(a.label),
-                ),
-                const SizedBox(height: 12),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(greeting, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                for (final a in actions) ...[
+                  FilledButton(
+                    onPressed: () => _stub(context, a.action),
+                    child: Text(a.label),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
