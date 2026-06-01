@@ -1,0 +1,59 @@
+# Dart / Flutter monorepo .gitignore
+
+# Dart tooling
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Pub workspace resolves a single lockfile at the root. We commit it (the repo
+# contains an app → reproducible builds, paired with the fvm-pinned SDK).
+# Members don't generate their own lockfile under a workspace, but ignore any
+# stray ones just in case.
+/packages/formbricks_flutter/pubspec.lock
+/apps/playground/pubspec.lock
+
+# Melos
+.melos_tool/
+pubspec_overrides.yaml
+
+# fvm: .fvmrc (the pinned version) is committed; the SDK cache/symlink under
+# .fvm/ is ignored — see the "FVM Version Cache" rule at the bottom of this file.
+
+# IDE / editor (no shared editor config committed)
+*.iml
+.idea/
+.vscode/
+.zed/
+*.swp
+
+# OS
+.DS_Store
+
+# Coverage
+coverage/
+*.lcov
+
+# Android
+**/android/.gradle/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.keystore
+*.jks
+
+# iOS
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/.symlinks/
+
+# Demo app env
+*.env
+.env*
+
+# FVM Version Cache
+.fvm/

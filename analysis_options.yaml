@@ -1,0 +1,27 @@
+# Shared analyzer config for the whole monorepo.
+# Each package/app includes this file so lint rules stay identical everywhere.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Treat missing public-API docs as a warning to keep pub.dev score high later.
+    public_member_api_docs: ignore
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/build/**"
+
+linter:
+  rules:
+    - prefer_single_quotes
+    - require_trailing_commas
+    - always_declare_return_types
+    - avoid_print
+    - prefer_const_constructors
+    - prefer_final_locals
+    - unawaited_futures
+    - directives_ordering

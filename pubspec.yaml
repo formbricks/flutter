@@ -1,0 +1,58 @@
+name: formbricks_flutter_workspace
+publish_to: none
+
+# Root of the Formbricks Flutter monorepo.
+# This package is never published; it only declares the pub workspace
+# (Dart 3.6+ / Melos 7) that ties the SDK package and demo app together
+# under a single resolved dependency graph + lockfile.
+environment:
+  sdk: ^3.12.0
+
+# Members of the pub workspace. Each member pubspec sets `resolution: workspace`.
+workspace:
+  - packages/formbricks_flutter
+  - apps/playground
+
+dev_dependencies:
+  melos: ^7.0.0
+
+# Melos 7 builds on Dart's native pub workspaces (the `workspace:` key above).
+# It adds cross-package scripting: run analyze / test / format across every
+# package with one command. Used locally and in CI.
+melos:
+  scripts:
+    ios:
+      description: Run the playground on an iOS simulator (boots one if needed).
+      run: ./tool/run.sh ios
+
+    android:
+      description: Run the playground on an Android emulator (boots one if needed).
+      run: ./tool/run.sh android
+
+    analyze:
+      description: Analyze the whole workspace with the shared lint rules.
+      run: dart analyze --fatal-infos .
+
+    format:
+      description: Format all Dart code.
+      run: dart format .
+
+    format-check:
+      description: Verify formatting (used in CI).
+      run: dart format --output=none --set-exit-if-changed .
+
+    test:
+      description: Run tests in every package that has a test/ dir.
+      run: flutter test
+      exec:
+        concurrency: 1
+      packageFilters:
+        dirExists: test
+
+    test-coverage:
+      description: Run tests with coverage in every package that has tests.
+      run: flutter test --coverage
+      exec:
+        concurrency: 1
+      packageFilters:
+        dirExists: test
