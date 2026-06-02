@@ -135,12 +135,19 @@ not support), so a simulator/emulator must be started first.
 **Easiest — one command** (boots the device if needed, then runs):
 
 ```bash
+# one-time: copy the template and fill in your workspace credentials
+cp apps/playground/.env.example apps/playground/.env
+
 ./tool/run.sh            # iOS simulator (default)
 ./tool/run.sh android    # Android emulator
 # or via Melos (package.json-style scripts, see Monorepo tooling):
 melos run ios
 melos run android
 ```
+
+`tool/run.sh` auto-passes `apps/playground/.env` to the app via
+`--dart-define-from-file` (the `.env` is git-ignored). You can still override
+with explicit `--dart-define=APP_URL=… --dart-define=WORKSPACE_ID=…` flags.
 
 **Manual CLI:** a simulator/emulator must be booted *first* — `flutter run`
 never boots one itself. Start a device, then target it by name:

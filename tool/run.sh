@@ -26,6 +26,13 @@ if command -v fvm >/dev/null 2>&1; then
   flutter() { fvm flutter "$@"; }
 fi
 
+# Auto-load APP_URL / WORKSPACE_ID from a local .env (git-ignored) so you don't
+# have to pass --dart-define on every run. Explicit --dart-define args still win.
+define_arg=""
+if [[ -f .env ]]; then
+  define_arg="--dart-define-from-file=.env"
+fi
+
 run_ios() {
   booted_udid() {
     xcrun simctl list devices booted \
@@ -41,7 +48,7 @@ run_ios() {
   open -a Simulator  # bring the simulator window to the front
   local udid; udid="$(booted_udid)"
   echo "Running on iOS simulator $udid"
-  exec flutter run -d "$udid" "$@"
+  exec flutter run -d "$udid" $define_arg "$@"
 }
 
 run_android() {
@@ -65,7 +72,7 @@ run_android() {
   fi
   local serial; serial="$(booted_serial)"
   echo "Running on Android emulator $serial"
-  exec flutter run -d "$serial" "$@"
+  exec flutter run -d "$serial" $define_arg "$@"
 }
 
 case "$platform" in
