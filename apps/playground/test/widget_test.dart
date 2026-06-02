@@ -5,7 +5,7 @@ void main() {
   testWidgets('playground renders the SDK test buttons', (tester) async {
     await tester.pumpWidget(const PlaygroundApp());
 
-    expect(find.text('Welcome to Formbricks'), findsOneWidget);
+    expect(find.text(kWelcomeMessage), findsOneWidget);
     expect(find.text('Trigger Code Action'), findsOneWidget);
     expect(find.text('Set userId'), findsOneWidget);
     expect(find.text('Logout'), findsOneWidget);

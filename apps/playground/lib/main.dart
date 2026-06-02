@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:formbricks_flutter/formbricks_flutter.dart';
 
 /// Credentials are injected at build time, mirroring the React Native
-/// playground's use of `EXPO_PUBLIC_*` env vars. Pass them with:
+/// playground's use of `EXPO_PUBLIC_*` env vars. Pass them via `--dart-define`
+/// (or a local `apps/playground/.env`, which `tool/run.sh` forwards):
 ///   --dart-define=APP_URL=https://app.formbricks.com --dart-define=WORKSPACE_ID=wsp_...
 const String _appUrl = String.fromEnvironment('APP_URL');
 const String _workspaceId = String.fromEnvironment('WORKSPACE_ID');
+
+/// Header text. Also referenced by the widget test.
+const String kWelcomeMessage = 'Welcome to Formbricks';
 
 void main() {
   runApp(const PlaygroundApp());
@@ -98,30 +102,30 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     return Scaffold(
       appBar: AppBar(title: const Text('Formbricks Flutter Playground')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('Welcome to Formbricks', textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text(
-                'setup: $_status',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 12),
-              for (final a in actions) ...[
-                FilledButton(
-                  onPressed: () => _stub(context, a.action),
-                  child: Text(a.label),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(kWelcomeMessage, textAlign: TextAlign.center),
+                const SizedBox(height: 8),
+                Text(
+                  'setup: $_status',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
+                for (final a in actions) ...[
+                  FilledButton(
+                    onPressed: () => _stub(context, a.action),
+                    child: Text(a.label),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
