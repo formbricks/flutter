@@ -5,8 +5,10 @@ on:
   push:
     tags:
       - "formbricks_flutter-v*"
-  release:
-    types: [released]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -35,17 +37,10 @@ jobs:
         with:
           channel: stable
           flutter-version-file: .fvmrc
-
-      - name: Restore pub cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+          cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
@@ -72,4 +67,10 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/formbricks_flutter-v')
         run: |
           cd packages/formbricks_flutter
+          # Fail-safe: publishing is irreversible, so it's gated on PUB_PUBLISH_ENABLED.
+          # First resolve the pub.dev name (taken; latest 0.0.7), bump version, drop publish_to: none.
+          if [ "${{ vars.PUB_PUBLISH_ENABLED }}" != "true" ]; then
+            echo "::notice::Publish skipped — set repository variable PUB_PUBLISH_ENABLED=true to enable (see prerequisites in release.yml)."
+            exit 0
+          fi
           flutter pub publish --force

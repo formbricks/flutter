@@ -182,7 +182,7 @@ SDK version.
   and code completion use the pinned SDK.
 - Bump the repo's Flutter version with `fvm use <version> --force`, then commit
   the changed `.fvmrc`.
-- Flutter floor enforced by pubspecs: Flutter ≥ 3.22 / Dart ≥ 3.12.
+- Floors: published SDK = Flutter ≥ 3.27 / Dart ≥ 3.6; dev tooling pins a newer SDK via `.fvmrc`.
 
 ## Running the demo app
 

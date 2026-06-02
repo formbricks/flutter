@@ -9,14 +9,38 @@ on:
     types: [opened, synchronize, reopened]
   merge_group:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
+# The declared floor (Flutter 3.27) isn't run here — dev tooling (melos, flutter_lints)
+# needs a newer SDK. It's validated by the dry-run + pana jobs instead.
 jobs:
   test:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.id }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned dev SDK (.fvmrc) — the gate.
+          - id: pinned
+            channel: stable
+            flutter-version-file: .fvmrc
+            enforce-lockfile: "--enforce-lockfile"
+            experimental: false
+          # Latest beta — non-blocking forward canary.
+          - id: beta
+            channel: beta
+            flutter-version-file: ""
+            enforce-lockfile: ""
+            experimental: true
 
     steps:
       - name: Harden the runner
@@ -30,19 +54,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
-          channel: stable
-          flutter-version-file: .fvmrc
-
-      - name: Restore pub cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+          channel: ${{ matrix.channel }}
+          flutter-version-file: ${{ matrix.flutter-version-file }}
+          cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get ${{ matrix.enforce-lockfile }}
 
       - name: Run SDK package tests
         run: |
@@ -50,10 +67,15 @@ jobs:
           cd packages/formbricks_flutter
           flutter test --machine > ../../test-results/formbricks_flutter.json
 
+      - name: Run playground app tests
+        run: |
+          cd apps/playground
+          flutter test
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: flutter-test-reports
+          name: flutter-test-reports-${{ matrix.id }}
           path: test-results/
           if-no-files-found: ignore
