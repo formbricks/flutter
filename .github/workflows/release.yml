@@ -28,6 +28,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up Dart for pub.dev OIDC
         uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
@@ -65,11 +67,13 @@ jobs:
 
       - name: Publish to pub.dev
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/formbricks_flutter-v')
+        env:
+          PUB_PUBLISH_ENABLED: ${{ vars.PUB_PUBLISH_ENABLED }}
         run: |
           cd packages/formbricks_flutter
           # Fail-safe: publishing is irreversible, so it's gated on PUB_PUBLISH_ENABLED.
           # First resolve the pub.dev name (taken; latest 0.0.7), bump version, drop publish_to: none.
-          if [ "${{ vars.PUB_PUBLISH_ENABLED }}" != "true" ]; then
+          if [ "$PUB_PUBLISH_ENABLED" != "true" ]; then
             echo "::notice::Publish skipped — set repository variable PUB_PUBLISH_ENABLED=true to enable (see prerequisites in release.yml)."
             exit 0
           fi

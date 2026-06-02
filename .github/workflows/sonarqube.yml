@@ -15,7 +15,7 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: read # lets SonarCloud read PR metadata for decoration
 
 jobs:
   sonarqube:
@@ -35,6 +35,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
