@@ -13,23 +13,34 @@ targeted in-app surveys.
 ```dart
 import 'package:formbricks_flutter/formbricks_flutter.dart';
 
-final result = await Formbricks.setup(
-  appUrl: 'https://app.formbricks.com',
-  workspaceId: 'wsp_...',
-);
+try {
+  final result = await Formbricks.setup(
+    appUrl: 'https://app.formbricks.com',
+    workspaceId: 'wsp_...',
+  );
 
-switch (result) {
-  case Ok():
+  switch (result) {
+    case Ok():
     // SDK is ready.
-  case Err(:final error):
-    // Invalid input (e.g. missing/!http(s) appUrl) — error.message explains.
+    case Err(:final error):
+    // Invalid input (e.g. missing / non-http(s) appUrl) — error.message explains.
+  }
+} on FormbricksSetupError {
+  // First-setup network/auth failure — see below.
 }
 ```
 
-`setup` is idempotent (a second call is a no-op), runs through an internal
-command queue, and installs a lifecycle-aware expiry ticker. A **first**-setup
-network failure throws `FormbricksSetupError` and puts the SDK into a 10-minute
-error cooldown; subsequent `setup` calls within that window short-circuit.
+`setup` reports problems through **two** channels:
+
+- It **returns `Err`** for invalid input (missing or non-`http(s)`
+  `appUrl` / `workspaceId`) and for a workspace/user sync failure when refreshing
+  an existing cached config.
+- It **throws `FormbricksSetupError`** when the *first* setup attempt fails on the
+  network/auth. The SDK then enters a 10-minute error cooldown; `setup` calls
+  within that window short-circuit and return `Ok` without hitting the network.
+
+`setup` is also idempotent (a second successful call is a no-op), runs through an
+internal command queue, and installs a lifecycle-aware expiry ticker.
 
 ## Planned public API
 

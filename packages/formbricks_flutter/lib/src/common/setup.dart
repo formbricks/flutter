@@ -108,38 +108,46 @@ Future<Result<void, FormbricksError>> setup({
       existing.workspaceId == workspaceId &&
       existing.appUrl == appUrl;
 
-  if (matches) {
-    final result = await _syncExistingConfig(config, api, existing);
-    if (result case Err()) return result;
-  } else {
-    // Fresh setup: reset any stale config, fetch, persist or enter error state.
-    await config.reset();
-    final response = await api.getWorkspaceState();
-    switch (response) {
-      case Ok(:final value):
-        await config.update(
-          TConfig(
-            workspaceId: workspaceId,
-            appUrl: appUrl,
-            workspace: value,
-            user: TUserState.defaultNoUserId,
-            filteredSurveys: const [],
-            status: TStatus.success,
-          ),
-        );
-      case Err(:final error):
-        // Persists error state and throws FormbricksSetupError.
-        await _handleErrorOnFirstSetup(config, error);
+  // The ticker takes ownership of `api` for its lifetime; every other path must
+  // close it so error/early-return/no-ticker paths don't leak the http.Client.
+  var handedToTicker = false;
+  try {
+    if (matches) {
+      final result = await _syncExistingConfig(config, api, existing);
+      if (result case Err()) return result;
+    } else {
+      // Fresh setup: reset any stale config, fetch, persist or enter error state.
+      await config.reset();
+      final response = await api.getWorkspaceState();
+      switch (response) {
+        case Ok(:final value):
+          await config.update(
+            TConfig(
+              workspaceId: workspaceId,
+              appUrl: appUrl,
+              workspace: value,
+              user: TUserState.defaultNoUserId,
+              filteredSurveys: const [],
+              status: TStatus.success,
+            ),
+          );
+        case Err(:final error):
+          // Persists error state and throws FormbricksSetupError.
+          await _handleErrorOnFirstSetup(config, error);
+      }
     }
-  }
 
-  if (startTicker) {
-    final ticker = ExpiryTicker(config: config, apiClient: api)..start();
-    _ticker = ticker;
+    if (startTicker) {
+      final ticker = ExpiryTicker(config: config, apiClient: api)..start();
+      _ticker = ticker;
+      handedToTicker = true;
+    }
+    _isSetup = true;
+    Logger.debug('Set up complete');
+    return const Result.ok(null);
+  } finally {
+    if (!handedToTicker) api.close();
   }
-  _isSetup = true;
-  Logger.debug('Set up complete');
-  return const Result.ok(null);
 }
 
 /// Sync path when the cached config already matches the requested workspace/app:

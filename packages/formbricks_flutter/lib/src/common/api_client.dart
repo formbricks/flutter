@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
 
 import '../types/config.dart';
@@ -111,7 +112,7 @@ class ApiClient {
     return _request<TWorkspaceState>(
       method: 'GET',
       endpoint:
-          '/api/v2/client/$workspaceId/environment?rand=${DateTime.now().millisecondsSinceEpoch}',
+          '/api/v2/client/$workspaceId/environment?rand=${clock.now().millisecondsSinceEpoch}',
       parse: (data) {
         final inner =
             (data['data'] as Map?)?.cast<String, dynamic>() ??
