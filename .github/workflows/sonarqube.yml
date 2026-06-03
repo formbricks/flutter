@@ -15,7 +15,7 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read # lets SonarCloud read PR metadata for decoration
+  pull-requests: read # required for SonarQube analysis and quality gate PR comments/decorations
 
 jobs:
   sonarqube:
