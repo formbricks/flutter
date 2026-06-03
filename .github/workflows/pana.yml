@@ -41,10 +41,10 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get --enforce-lockfile
+        run: make deps-lockfile
 
       - name: Install pana
-        run: dart pub global activate pana
+        run: make pana-install
 
       - name: Run pana
-        run: dart pub global run pana --no-warning --exit-code-threshold 30 packages/formbricks_flutter
+        run: make pana

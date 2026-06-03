@@ -33,13 +33,13 @@ jobs:
           - id: pinned
             channel: stable
             flutter-version-file: .fvmrc
-            enforce-lockfile: "--enforce-lockfile"
+            deps-target: deps-lockfile
             experimental: false
           # Latest beta — non-blocking forward canary.
           - id: beta
             channel: beta
             flutter-version-file: ""
-            enforce-lockfile: ""
+            deps-target: deps
             experimental: true
 
     steps:
@@ -61,18 +61,15 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get ${{ matrix.enforce-lockfile }}
+        env:
+          DEPS_TARGET: ${{ matrix.deps-target }}
+        run: make "$DEPS_TARGET"
 
       - name: Run SDK package tests
-        run: |
-          mkdir -p test-results
-          cd packages/formbricks_flutter
-          flutter test --machine > ../../test-results/formbricks_flutter.json
+        run: make test-sdk-machine
 
       - name: Run playground app tests
-        run: |
-          cd apps/playground
-          flutter test
+        run: make test-playground
 
       - name: Upload test reports
         if: failure()

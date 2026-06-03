@@ -41,9 +41,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get --enforce-lockfile
+        run: make deps-lockfile
 
       - name: Run publish dry run
-        run: |
-          cd packages/formbricks_flutter
-          flutter pub publish --dry-run
+        run: make pub-publish-dry-run

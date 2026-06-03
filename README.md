@@ -45,17 +45,18 @@ dart pub global activate fvm
 
 ```bash
 fvm install
-fvm flutter doctor -v
+make doctor
 ```
 
 `fvm install` downloads the Flutter version from `.fvmrc` (currently `3.44.0`).
-`fvm flutter doctor -v` checks the local iOS/Android tooling. Fix the red `✗`
-items for the platform you want to run, then run the doctor command again.
+`make doctor` checks the local iOS/Android tooling with the pinned Flutter SDK.
+Fix the red `✗` items for the platform you want to run, then run the doctor
+command again.
 
 ### 4. Fetch dependencies
 
 ```bash
-fvm flutter pub get
+make deps
 ```
 
 This resolves the whole Dart pub workspace from the root `pubspec.yaml` and
@@ -64,11 +65,11 @@ uses the shared `pubspec.lock`.
 ### 5. Run the playground app
 
 ```bash
-./tool/run.sh            # iOS simulator, default
-./tool/run.sh android    # Android emulator
+make run            # iOS simulator, default
+make run android    # Android emulator
 ```
 
-The script starts from the repo root, boots a simulator/emulator when it can,
+The Makefile delegates to `tool/run.sh`, boots a simulator/emulator when it can,
 then runs `apps/playground`. Once the app is running, press `r` for hot reload,
 `R` for hot restart, and `q` to quit.
 
@@ -82,6 +83,7 @@ lands in follow-up work.
 ```
 flutter/
 ├── pubspec.yaml                 # pub workspace root + Melos script config (never published)
+├── Makefile                     # daily dev + CI command entry point
 ├── analysis_options.yaml        # shared analyzer + lint rules for every package
 ├── sonar-project.properties     # SonarCloud config (finalised in a follow-up)
 ├── LICENSE                      # MIT
@@ -126,24 +128,47 @@ Uses **Dart pub workspaces** (Dart ≥ 3.6) + **[Melos](https://melos.invertase.
 
 ### Common commands
 
-All run from the repo root. The Flutter version is pinned with **fvm** (see
-[Toolchain details](#toolchain-details)), so prefix Flutter/Dart calls with
-`fvm` to use the exact pinned SDK:
+All run from the repo root. Use the Makefile for normal development; it uses
+`fvm flutter` / `fvm dart` when FVM is installed and falls back to `flutter` /
+`dart` from `PATH` otherwise.
 
 ```bash
-fvm flutter pub get              # resolve the whole workspace (one lockfile)
-fvm dart run melos run analyze   # dart analyze --fatal-infos across all packages
-fvm dart run melos run format    # dart format .
-fvm dart run melos run format-check          # CI: fail if unformatted
-fvm dart run melos run test --no-select      # flutter test in every package
-fvm dart run melos run test-coverage --no-select
+make help          # list available targets
+make deps          # resolve the whole workspace (one lockfile)
+make format        # format Dart code
+make format-check  # CI-style formatting check
+make analyze       # analyze all packages
+make test          # run tests in packages that have test/
+make coverage      # run tests with coverage
+make check         # format-check + analyze + test
 ```
 
-> - `--no-select` skips Melos's interactive package picker — required in CI and
->   any non-TTY shell.
-> - `fvm dart run melos` runs the workspace's pinned Melos under the pinned SDK.
->   If you prefer the global `melos` binary (`dart pub global activate melos`),
->   run it as `fvm exec melos run …` so it still uses the pinned Flutter.
+Important daily commands:
+
+```bash
+make deps
+make run
+make run android
+make format
+make analyze
+make test
+make check
+```
+
+CI/parity targets are also available when you need to reproduce workflow steps:
+
+```bash
+make deps-lockfile
+make analyze-ci
+make test-sdk-machine
+make test-sdk-coverage
+make test-playground
+make build-android
+make build-ios-no-codesign
+make pana-install
+make pana
+make pub-publish-dry-run
+```
 
 ## Conventions
 
@@ -194,15 +219,15 @@ not support), so a simulator/emulator must be started first.
 ### One-command run
 
 ```bash
-./tool/run.sh            # iOS simulator (default)
-./tool/run.sh android    # Android emulator
+make run            # iOS simulator (default)
+make run android    # Android emulator
 ```
 
-Or via Melos after `fvm flutter pub get`:
+Or call the underlying script directly after `make deps`:
 
 ```bash
-fvm dart run melos run ios
-fvm dart run melos run android
+./tool/run.sh
+./tool/run.sh android
 ```
 
 ### Device checks
@@ -210,11 +235,11 @@ fvm dart run melos run android
 Use these commands when the run script cannot find a device:
 
 ```bash
-fvm flutter emulators   # configured simulators/emulators Flutter can launch
-fvm flutter devices     # currently running simulators/emulators/devices
+make emulators   # configured simulators/emulators Flutter can launch
+make devices     # currently running simulators/emulators/devices
 ```
 
-For Android, if no emulator appears in `fvm flutter emulators`, create an AVD in
+For Android, if no emulator appears in `make emulators`, create an AVD in
 Android Studio's Device Manager first.
 
 ### Manual CLI run

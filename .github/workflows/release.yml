@@ -42,39 +42,32 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get --enforce-lockfile
+        run: make deps-lockfile
 
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed .
+        run: make format-check
 
       - name: Analyze
-        run: flutter analyze --fatal-infos --fatal-warnings
+        run: make analyze-ci
 
       - name: Run SDK package tests with coverage
-        run: |
-          cd packages/formbricks_flutter
-          flutter test --coverage
+        run: make test-sdk-coverage
 
       - name: Run playground tests
-        run: |
-          cd apps/playground
-          flutter test
+        run: make test-playground
 
       - name: Run publish dry run
-        run: |
-          cd packages/formbricks_flutter
-          flutter pub publish --dry-run
+        run: make pub-publish-dry-run
 
       - name: Publish to pub.dev
         if: github.event_name == 'push' && github.ref_type == 'tag'
         env:
           PUB_PUBLISH_ENABLED: ${{ vars.PUB_PUBLISH_ENABLED }}
         run: |
-          cd packages/formbricks_flutter
           # Fail-safe: publishing is irreversible, so it's gated on PUB_PUBLISH_ENABLED.
           # First resolve the pub.dev name (taken; latest 0.0.7), bump version, drop publish_to: none.
           if [ "$PUB_PUBLISH_ENABLED" != "true" ]; then
             echo "::notice::Publish skipped — set repository variable PUB_PUBLISH_ENABLED=true to enable (see prerequisites in release.yml)."
             exit 0
           fi
-          flutter pub publish --force
+          make pub-publish-force

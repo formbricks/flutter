@@ -51,12 +51,10 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Install dependencies
-        run: flutter pub get --enforce-lockfile
+        run: make deps-lockfile
 
       - name: Build Android debug APK
-        run: |
-          cd apps/playground
-          flutter build apk --debug
+        run: make build-android
 
   ios:
     name: Build iOS
@@ -92,9 +90,7 @@ jobs:
             ${{ runner.os }}-pods-
 
       - name: Install dependencies
-        run: flutter pub get --enforce-lockfile
+        run: make deps-lockfile
 
       - name: Build iOS debug app
-        run: |
-          cd apps/playground
-          flutter build ios --no-codesign --debug
+        run: make build-ios-no-codesign
