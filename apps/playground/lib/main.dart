@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:formbricks_flutter/formbricks_flutter.dart';
 
-const kWelcomeMessage = 'Welcome to Formbricks';
+/// Credentials are injected at build time, mirroring the React Native
+/// playground's use of `EXPO_PUBLIC_*` env vars. Pass them via `--dart-define`
+/// (or a local `apps/playground/.env`, which `tool/run.sh` forwards):
+///   --dart-define=APP_URL=https://app.formbricks.com --dart-define=WORKSPACE_ID=wsp_...
+const String _appUrl = String.fromEnvironment('APP_URL');
+const String _workspaceId = String.fromEnvironment('WORKSPACE_ID');
+
+/// Header text. Also referenced by the widget test.
+const String kWelcomeMessage = 'Welcome to Formbricks';
 
 void main() {
   runApp(const PlaygroundApp());
@@ -22,8 +31,48 @@ class PlaygroundApp extends StatelessWidget {
   }
 }
 
-class PlaygroundHome extends StatelessWidget {
+class PlaygroundHome extends StatefulWidget {
   const PlaygroundHome({super.key});
+
+  @override
+  State<PlaygroundHome> createState() => _PlaygroundHomeState();
+}
+
+class _PlaygroundHomeState extends State<PlaygroundHome> {
+  String _status = 'initializing…';
+
+  @override
+  void initState() {
+    super.initState();
+    _initFormbricks();
+  }
+
+  Future<void> _initFormbricks() async {
+    if (_appUrl.isEmpty || _workspaceId.isEmpty) {
+      setState(
+        () => _status =
+            'Missing APP_URL / WORKSPACE_ID — pass them via --dart-define',
+      );
+      return;
+    }
+    try {
+      final result = await Formbricks.setup(
+        appUrl: _appUrl,
+        workspaceId: _workspaceId,
+        logLevel: LogLevel.debug,
+      );
+      if (!mounted) return;
+      setState(() {
+        _status = switch (result) {
+          Ok() => 'setup complete ✓',
+          Err(:final error) => 'setup error: ${error.message}',
+        };
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _status = 'setup failed: $e');
+    }
+  }
 
   /// Stub for SDK calls. The real `Formbricks.*` API is not wired yet.
   /// For now each button just confirms the tap so the demo's UX can be
@@ -41,9 +90,6 @@ class PlaygroundHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Proves the SDK package links into the app via the pub workspace.
-    final greeting = kWelcomeMessage;
-
     final actions = <({String label, String action})>[
       (label: 'Trigger Code Action', action: "track('code')"),
       (label: 'Set userId', action: "setUserId('random-user-id')"),
@@ -63,7 +109,13 @@ class PlaygroundHome extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(greeting, textAlign: TextAlign.center),
+                const Text(kWelcomeMessage, textAlign: TextAlign.center),
+                const SizedBox(height: 8),
+                Text(
+                  'setup: $_status',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 24),
                 for (final a in actions) ...[
                   FilledButton(

@@ -78,7 +78,7 @@ Ship is successful when **all** of the following hold:
 
 ### Tech stack
 
-- Language: Dart ≥ 3.12.0. Flutter ≥ 3.44.0 (stable channel).
+- Language: Dart ≥ 3.4. Flutter ≥ 3.22 (stable channel).
 - Required plugins (peer/direct):
   - `webview_flutter: ^4.x` — survey rendering.
   - `shared_preferences: ^2.x` — persistent config (RN equivalent: `AsyncStorage`).
@@ -233,7 +233,7 @@ No third parties. The SDK only talks to the customer's `appUrl` (Formbricks Clou
   - Offer an opt-in `storage:` parameter on `Formbricks` widget that accepts a custom `FormbricksStorage` interface, so security-conscious customers can plug in `flutter_secure_storage` themselves.
   - Match RN parity — RN uses unencrypted `AsyncStorage` too — so we are not regressing.
 - iOS `NSUserDefaults` (backing `SharedPreferences` on iOS) is similarly unencrypted but file-system-protected. Same documentation note.
-- No PII in logs. Logger never logs attribute values; only attribute keys and userId at `debug` level. Default level is `error`.
+- No PII in logs. Logger never logs attribute values; only attribute keys and userIds at `debug` level. Default level is `error`.
 
 ### Does this affect tenant isolation?
 
@@ -307,7 +307,7 @@ No new permissions. The SDK uses the **embedding app's** existing internet permi
 
 ## Appendix A — Suggested package layout
 
-```text
+```
 formbricks_flutter/
 ├── lib/
 │   ├── formbricks_flutter.dart            # public exports only

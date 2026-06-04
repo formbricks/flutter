@@ -4,17 +4,51 @@ First-party Flutter SDK for [Formbricks](https://formbricks.com). Connect your
 Flutter app to a Formbricks workspace, identify users, track actions, and render
 targeted in-app surveys.
 
-> **Status: skeleton.** This package was scaffolded to establish the monorepo.
-> The public API and survey rendering land in follow-up work. It currently
-> exposes only a placeholder `welcome()`.
+> **Status: in development.** Initialization (`Formbricks.setup`) and its
+> foundations are implemented. `track` / identify / survey rendering land in
+> follow-up work.
+
+## Initialization
+
+```dart
+import 'package:formbricks_flutter/formbricks_flutter.dart';
+
+try {
+  final result = await Formbricks.setup(
+    appUrl: 'https://app.formbricks.com',
+    workspaceId: 'wsp_...',
+  );
+
+  switch (result) {
+    case Ok():
+    // SDK is ready.
+    case Err(:final error):
+    // Invalid input (e.g. missing / non-http(s) appUrl) — error.message explains.
+  }
+} on FormbricksSetupError {
+  // First-setup network/auth failure — see below.
+}
+```
+
+`setup` reports problems through **two** channels:
+
+- It **returns `Err`** for invalid input (missing or non-`http(s)`
+  `appUrl` / `workspaceId`) and for a workspace/user sync failure when refreshing
+  an existing cached config.
+- It **throws `FormbricksSetupError`** when the *first* setup attempt fails on the
+  network/auth. The SDK then enters a 10-minute error cooldown.
+- It **returns `Err(SetupCooldownError)`** for any `setup` call made *within* that
+  cooldown window — the SDK stays inert (no network call), and `error.retryAt`
+  says when it will try again. Distinct from `Ok` so callers don't treat the
+  suppressed-retry state as "ready".
+
+`setup` is also idempotent (a second successful call is a no-op), runs through an
+internal command queue, and installs a lifecycle-aware expiry ticker.
 
 ## Planned public API
 
 ```dart
-// Host widget — initializes the SDK and renders any active survey.
-Formbricks(appUrl: 'https://app.formbricks.com', workspaceId: 'wsp_...');
-
-// Static imperative API (sequenced via an internal command queue).
+// Static imperative API (sequenced via the same command queue).
 await Formbricks.track('button_clicked');
 await Formbricks.setUserId('user_123');
 await Formbricks.setAttribute('plan', 'pro');

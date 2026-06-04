@@ -35,6 +35,9 @@ pubspec_overrides.yaml
 coverage/
 *.lcov
 
+# Test artifacts (machine reports from `make test-sdk-machine`)
+test-results/
+
 # Android
 **/android/.gradle/
 **/android/local.properties
@@ -51,9 +54,11 @@ coverage/
 **/ios/Flutter/ephemeral/
 **/.symlinks/
 
-# Demo app env
+# Demo app env — ignore real .env files, but commit the example template.
 *.env
 .env*
+!.env.example
+!**/.env.example
 
 # FVM Version Cache
 .fvm/
