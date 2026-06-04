@@ -13,31 +13,31 @@ const _appUrl = 'https://app.formbricks.com';
 const _workspaceId = 'wsp_1';
 
 String _envBody(Map<String, dynamic> data) => jsonEncode({
-  'data': {'expiresAt': '2100-01-01T00:00:00.000', 'data': data},
-});
+      'data': {'expiresAt': '2100-01-01T00:00:00.000', 'data': data},
+    });
 
 String _userBody() => jsonEncode({
-  'data': {
-    'state': {
-      'expiresAt': null,
       'data': {
-        'userId': 'u1',
-        'contactId': null,
-        'segments': <dynamic>[],
-        'displays': <dynamic>[],
-        'responses': <dynamic>[],
-        'lastDisplayAt': null,
+        'state': {
+          'expiresAt': null,
+          'data': {
+            'userId': 'u1',
+            'contactId': null,
+            'segments': <dynamic>[],
+            'displays': <dynamic>[],
+            'responses': <dynamic>[],
+            'lastDisplayAt': null,
+          },
+        },
       },
-    },
-  },
-});
+    });
 
 ApiClient _client(MockClient mock, {bool isDebug = false}) => ApiClient(
-  appUrl: _appUrl,
-  workspaceId: _workspaceId,
-  client: mock,
-  isDebug: isDebug,
-);
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      client: mock,
+      isDebug: isDebug,
+    );
 
 TWorkspaceState _okWorkspace(Result<TWorkspaceState, ApiErrorResponse> r) =>
     switch (r) {
@@ -46,9 +46,9 @@ TWorkspaceState _okWorkspace(Result<TWorkspaceState, ApiErrorResponse> r) =>
     };
 
 ApiErrorResponse _errOf(Result<Object?, ApiErrorResponse> r) => switch (r) {
-  Ok() => fail('expected Err'),
-  Err(:final error) => error,
-};
+      Ok() => fail('expected Err'),
+      Err(:final error) => error,
+    };
 
 void main() {
   group('getWorkspaceState', () {

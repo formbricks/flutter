@@ -14,16 +14,16 @@ void main() {
   });
 
   TConfig sampleConfig({DateTime? workspaceExpiry}) => TConfig(
-    workspaceId: 'wsp_1',
-    appUrl: 'https://app.formbricks.com',
-    workspace: TWorkspaceState(
-      expiresAt: workspaceExpiry ?? DateTime(2100),
-      data: const TWorkspaceData(),
-    ),
-    user: TUserState.defaultNoUserId,
-    filteredSurveys: const [],
-    status: TStatus.success,
-  );
+        workspaceId: 'wsp_1',
+        appUrl: 'https://app.formbricks.com',
+        workspace: TWorkspaceState(
+          expiresAt: workspaceExpiry ?? DateTime(2100),
+          data: const TWorkspaceData(),
+        ),
+        user: TUserState.defaultNoUserId,
+        filteredSurveys: const [],
+        status: TStatus.success,
+      );
 
   test('update() persists and completes only after the disk write', () async {
     final config = FormbricksConfig.instance;

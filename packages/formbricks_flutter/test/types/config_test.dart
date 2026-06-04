@@ -70,11 +70,9 @@ void main() {
     });
 
     test('tolerates a partial payload missing workspace and user keys', () {
-      final json =
-          jsonDecode(
-                '{"status":{"value":"error","expiresAt":"2026-06-01T12:00:00.000"}}',
-              )
-              as Map<String, dynamic>;
+      final json = jsonDecode(
+        '{"status":{"value":"error","expiresAt":"2026-06-01T12:00:00.000"}}',
+      ) as Map<String, dynamic>;
 
       final config = TConfig.fromJson(json);
 

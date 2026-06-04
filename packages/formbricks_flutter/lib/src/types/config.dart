@@ -25,9 +25,9 @@ class TDisplay {
 
   /// Builds a [TDisplay] from decoded JSON.
   factory TDisplay.fromJson(Map<String, dynamic> json) => TDisplay(
-    surveyId: json['surveyId'] as String,
-    createdAt: _parseDate(json['createdAt'])!,
-  );
+        surveyId: json['surveyId'] as String,
+        createdAt: _parseDate(json['createdAt'])!,
+      );
 
   /// The id of the displayed survey.
   final String surveyId;
@@ -37,9 +37,9 @@ class TDisplay {
 
   /// Encodes this record to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'surveyId': surveyId,
-    'createdAt': _dateToIso(createdAt),
-  };
+        'surveyId': surveyId,
+        'createdAt': _dateToIso(createdAt),
+      };
 }
 
 /// The user-scoped slice of state (identity, segments, displays, responses).
@@ -57,18 +57,19 @@ class TUserData {
 
   /// Builds [TUserData] from decoded JSON, tolerating missing keys.
   factory TUserData.fromJson(Map<String, dynamic> json) => TUserData(
-    userId: json['userId'] as String?,
-    contactId: json['contactId'] as String?,
-    segments: (json['segments'] as List?)?.cast<String>() ?? const <String>[],
-    displays:
-        (json['displays'] as List?)
-            ?.map((e) => TDisplay.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        const <TDisplay>[],
-    responses: (json['responses'] as List?)?.cast<String>() ?? const <String>[],
-    lastDisplayAt: _parseDate(json['lastDisplayAt']),
-    language: json['language'] as String?,
-  );
+        userId: json['userId'] as String?,
+        contactId: json['contactId'] as String?,
+        segments:
+            (json['segments'] as List?)?.cast<String>() ?? const <String>[],
+        displays: (json['displays'] as List?)
+                ?.map((e) => TDisplay.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const <TDisplay>[],
+        responses:
+            (json['responses'] as List?)?.cast<String>() ?? const <String>[],
+        lastDisplayAt: _parseDate(json['lastDisplayAt']),
+        language: json['language'] as String?,
+      );
 
   /// The identified user id, or null when anonymous.
   final String? userId;
@@ -93,14 +94,14 @@ class TUserData {
 
   /// Encodes this user data to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'contactId': contactId,
-    'segments': segments,
-    'displays': displays.map((d) => d.toJson()).toList(),
-    'responses': responses,
-    'lastDisplayAt': _dateToIso(lastDisplayAt),
-    if (language != null) 'language': language,
-  };
+        'userId': userId,
+        'contactId': contactId,
+        'segments': segments,
+        'displays': displays.map((d) => d.toJson()).toList(),
+        'responses': responses,
+        'lastDisplayAt': _dateToIso(lastDisplayAt),
+        if (language != null) 'language': language,
+      };
 }
 
 /// The user state envelope: an expiry plus the user [data].
@@ -110,12 +111,12 @@ class TUserState {
 
   /// Builds [TUserState] from decoded JSON.
   factory TUserState.fromJson(Map<String, dynamic> json) => TUserState(
-    expiresAt: _parseDate(json['expiresAt']),
-    data: TUserData.fromJson(
-      (json['data'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{},
-    ),
-  );
+        expiresAt: _parseDate(json['expiresAt']),
+        data: TUserData.fromJson(
+          (json['data'] as Map?)?.cast<String, dynamic>() ??
+              const <String, dynamic>{},
+        ),
+      );
 
   /// When this user state expires, or null for anonymous (never expires).
   final DateTime? expiresAt;
@@ -132,15 +133,15 @@ class TUserState {
 
   /// Returns a copy with the given fields overridden.
   TUserState copyWith({DateTime? expiresAt, TUserData? data}) => TUserState(
-    expiresAt: expiresAt ?? this.expiresAt,
-    data: data ?? this.data,
-  );
+        expiresAt: expiresAt ?? this.expiresAt,
+        data: data ?? this.data,
+      );
 
   /// Encodes this user state to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'expiresAt': _dateToIso(expiresAt),
-    'data': data.toJson(),
-  };
+        'expiresAt': _dateToIso(expiresAt),
+        'data': data.toJson(),
+      };
 }
 
 /// The workspace-scoped data: surveys, action classes, and settings.
@@ -156,12 +157,11 @@ class TWorkspaceData {
 
   /// Builds [TWorkspaceData] from decoded JSON.
   factory TWorkspaceData.fromJson(Map<String, dynamic> json) => TWorkspaceData(
-    surveys: (json['surveys'] as List?) ?? const [],
-    actionClasses: (json['actionClasses'] as List?) ?? const [],
-    settings:
-        (json['settings'] as Map?)?.cast<String, dynamic>() ??
-        const <String, dynamic>{},
-  );
+        surveys: (json['surveys'] as List?) ?? const [],
+        actionClasses: (json['actionClasses'] as List?) ?? const [],
+        settings: (json['settings'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+      );
 
   /// The workspace's surveys.
   final List<dynamic> surveys;
@@ -174,10 +174,10 @@ class TWorkspaceData {
 
   /// Encodes this workspace data to JSON.
   Map<String, dynamic> toJson() => {
-    'surveys': surveys,
-    'actionClasses': actionClasses,
-    'settings': settings,
-  };
+        'surveys': surveys,
+        'actionClasses': actionClasses,
+        'settings': settings,
+      };
 }
 
 /// The workspace state envelope: an expiry plus the workspace [data].
@@ -203,9 +203,9 @@ class TWorkspaceState {
 
   /// Encodes this workspace state to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'expiresAt': _dateToIso(expiresAt),
-    'data': data.toJson(),
-  };
+        'expiresAt': _dateToIso(expiresAt),
+        'data': data.toJson(),
+      };
 }
 
 /// The success/error status envelope, with an optional cooldown expiry.
@@ -215,9 +215,9 @@ class TStatus {
 
   /// Builds [TStatus] from decoded JSON.
   factory TStatus.fromJson(Map<String, dynamic> json) => TStatus(
-    value: json['value'] as String? ?? 'success',
-    expiresAt: _parseDate(json['expiresAt']),
-  );
+        value: json['value'] as String? ?? 'success',
+        expiresAt: _parseDate(json['expiresAt']),
+      );
 
   /// The success default status.
   static const TStatus success = TStatus(value: 'success');
@@ -233,9 +233,9 @@ class TStatus {
 
   /// Encodes this status to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'value': value,
-    'expiresAt': _dateToIso(expiresAt),
-  };
+        'value': value,
+        'expiresAt': _dateToIso(expiresAt),
+      };
 }
 
 /// The full persisted SDK config.
@@ -256,21 +256,23 @@ class TConfig {
 
   /// Builds [TConfig] from decoded JSON, tolerating missing `workspace`/`user`.
   factory TConfig.fromJson(Map<String, dynamic> json) => TConfig(
-    workspaceId: json['workspaceId'] as String?,
-    appUrl: json['appUrl'] as String?,
-    workspace: json['workspace'] == null
-        ? null
-        : TWorkspaceState.fromJson(
-            (json['workspace'] as Map).cast<String, dynamic>(),
-          ),
-    user: json['user'] == null
-        ? TUserState.defaultNoUserId
-        : TUserState.fromJson((json['user'] as Map).cast<String, dynamic>()),
-    filteredSurveys: (json['filteredSurveys'] as List?) ?? const [],
-    status: json['status'] == null
-        ? TStatus.success
-        : TStatus.fromJson((json['status'] as Map).cast<String, dynamic>()),
-  );
+        workspaceId: json['workspaceId'] as String?,
+        appUrl: json['appUrl'] as String?,
+        workspace: json['workspace'] == null
+            ? null
+            : TWorkspaceState.fromJson(
+                (json['workspace'] as Map).cast<String, dynamic>(),
+              ),
+        user: json['user'] == null
+            ? TUserState.defaultNoUserId
+            : TUserState.fromJson(
+                (json['user'] as Map).cast<String, dynamic>(),
+              ),
+        filteredSurveys: (json['filteredSurveys'] as List?) ?? const [],
+        status: json['status'] == null
+            ? TStatus.success
+            : TStatus.fromJson((json['status'] as Map).cast<String, dynamic>()),
+      );
 
   /// The workspace id this config belongs to.
   final String? workspaceId;
@@ -299,24 +301,25 @@ class TConfig {
     TUserState? user,
     List<dynamic>? filteredSurveys,
     TStatus? status,
-  }) => TConfig(
-    workspaceId: workspaceId ?? this.workspaceId,
-    appUrl: appUrl ?? this.appUrl,
-    workspace: workspace ?? this.workspace,
-    user: user ?? this.user,
-    filteredSurveys: filteredSurveys ?? this.filteredSurveys,
-    status: status ?? this.status,
-  );
+  }) =>
+      TConfig(
+        workspaceId: workspaceId ?? this.workspaceId,
+        appUrl: appUrl ?? this.appUrl,
+        workspace: workspace ?? this.workspace,
+        user: user ?? this.user,
+        filteredSurveys: filteredSurveys ?? this.filteredSurveys,
+        status: status ?? this.status,
+      );
 
   /// Encodes this config to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
-    'workspaceId': workspaceId,
-    'appUrl': appUrl,
-    'workspace': workspace?.toJson(),
-    'user': user.toJson(),
-    'filteredSurveys': filteredSurveys,
-    'status': status.toJson(),
-  };
+        'workspaceId': workspaceId,
+        'appUrl': appUrl,
+        'workspace': workspace?.toJson(),
+        'user': user.toJson(),
+        'filteredSurveys': filteredSurveys,
+        'status': status.toJson(),
+      };
 }
 
 /// Input for a user create/update call.

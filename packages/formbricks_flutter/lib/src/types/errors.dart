@@ -43,7 +43,10 @@ sealed class FormbricksError implements Exception {
 final class MissingFieldError extends FormbricksError {
   /// Creates a missing-field error for [field].
   MissingFieldError(this.field, {String? message})
-    : super(FormbricksErrorCode.missingField, message ?? 'No $field provided');
+      : super(
+          FormbricksErrorCode.missingField,
+          message ?? 'No $field provided',
+        );
 
   /// The name of the offending field.
   final String field;
@@ -81,7 +84,7 @@ final class NetworkError extends FormbricksError {
 final class InvalidCodeError extends FormbricksError {
   /// Creates an invalid-code error.
   InvalidCodeError([String message = 'Invalid code'])
-    : super(FormbricksErrorCode.invalidCode, message);
+      : super(FormbricksErrorCode.invalidCode, message);
 }
 
 /// Thrown when the very first [setup] attempt fails and the SDK is placed into
@@ -100,11 +103,11 @@ final class FormbricksSetupError extends FormbricksError {
 final class SetupCooldownError extends FormbricksError {
   /// Creates a cooldown error, optionally carrying the cooldown expiry.
   SetupCooldownError({this.retryAt})
-    : super(
-        FormbricksErrorCode.setupCooldown,
-        'Formbricks is in an error cooldown after a failed setup. '
-        'Retry later.',
-      );
+      : super(
+          FormbricksErrorCode.setupCooldown,
+          'Formbricks is in an error cooldown after a failed setup. '
+          'Retry later.',
+        );
 
   /// When the cooldown expires and `setup()` will attempt again, if known.
   final DateTime? retryAt;

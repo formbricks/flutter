@@ -16,36 +16,36 @@ const _appUrl = 'https://app.formbricks.com';
 const _workspaceId = 'wsp_1';
 
 String _envBody() => jsonEncode({
-  'data': {
-    'expiresAt': '2100-01-01T00:00:00.000',
-    'data': {
-      'surveys': <dynamic>[],
-      'actionClasses': <dynamic>[],
-      'settings': <String, dynamic>{},
-    },
-  },
-});
+      'data': {
+        'expiresAt': '2100-01-01T00:00:00.000',
+        'data': {
+          'surveys': <dynamic>[],
+          'actionClasses': <dynamic>[],
+          'settings': <String, dynamic>{},
+        },
+      },
+    });
 
 String _userBody() => jsonEncode({
-  'data': {
-    'state': {
-      'expiresAt': null,
       'data': {
-        'userId': 'u1',
-        'contactId': null,
-        'segments': <dynamic>[],
-        'displays': <dynamic>[],
-        'responses': <dynamic>[],
-        'lastDisplayAt': null,
+        'state': {
+          'expiresAt': null,
+          'data': {
+            'userId': 'u1',
+            'contactId': null,
+            'segments': <dynamic>[],
+            'displays': <dynamic>[],
+            'responses': <dynamic>[],
+            'lastDisplayAt': null,
+          },
+        },
       },
-    },
-  },
-});
+    });
 
 FormbricksError _errOf(Result<void, FormbricksError> r) => switch (r) {
-  Ok() => fail('expected Err'),
-  Err(:final error) => error,
-};
+      Ok() => fail('expected Err'),
+      Err(:final error) => error,
+    };
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -35,6 +35,9 @@ pubspec_overrides.yaml
 coverage/
 *.lcov
 
+# Test artifacts (machine reports from `make test-sdk-machine`)
+test-results/
+
 # Android
 **/android/.gradle/
 **/android/local.properties

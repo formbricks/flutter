@@ -13,15 +13,15 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _envBody(String expiresAt) => jsonEncode({
-  'data': {
-    'expiresAt': expiresAt,
-    'data': {
-      'surveys': <dynamic>[],
-      'actionClasses': <dynamic>[],
-      'settings': <String, dynamic>{},
-    },
-  },
-});
+      'data': {
+        'expiresAt': expiresAt,
+        'data': {
+          'surveys': <dynamic>[],
+          'actionClasses': <dynamic>[],
+          'settings': <String, dynamic>{},
+        },
+      },
+    });
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -39,11 +39,11 @@ void main() {
   });
 
   ExpiryTicker makeTicker(void Function() onEachTick) => ExpiryTicker(
-    config: FormbricksConfig.instance,
-    apiClient: api,
-    interval: const Duration(seconds: 60),
-    onTick: () async => onEachTick(),
-  );
+        config: FormbricksConfig.instance,
+        apiClient: api,
+        interval: const Duration(seconds: 60),
+        onTick: () async => onEachTick(),
+      );
 
   test('does not tick while paused', () {
     fakeAsync((async) {
@@ -106,19 +106,20 @@ void main() {
       required DateTime workspaceExpiry,
       DateTime? userExpiry,
       String? userId,
-    }) => TConfig(
-      workspaceId: 'w',
-      appUrl: 'https://app.x',
-      workspace: TWorkspaceState(
-        expiresAt: workspaceExpiry,
-        data: const TWorkspaceData(),
-      ),
-      user: TUserState(
-        expiresAt: userExpiry,
-        data: TUserData(userId: userId),
-      ),
-      status: TStatus.success,
-    );
+    }) =>
+        TConfig(
+          workspaceId: 'w',
+          appUrl: 'https://app.x',
+          workspace: TWorkspaceState(
+            expiresAt: workspaceExpiry,
+            data: const TWorkspaceData(),
+          ),
+          user: TUserState(
+            expiresAt: userExpiry,
+            data: TUserData(userId: userId),
+          ),
+          status: TStatus.success,
+        );
 
     test('refetches the workspace when it has expired', () async {
       await seed(

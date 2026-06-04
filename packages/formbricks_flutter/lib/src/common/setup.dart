@@ -110,8 +110,7 @@ Future<Result<void, FormbricksError>> setup({
     isDebug: logLevel == LogLevel.debug,
   );
 
-  final matches =
-      existing != null &&
+  final matches = existing != null &&
       existing.workspace != null &&
       existing.workspaceId == workspaceId &&
       existing.appUrl == normalizedAppUrl;
@@ -237,8 +236,8 @@ Future<Never> _handleErrorOnFirstSetup(
 }
 
 NetworkError _toNetworkError(ApiErrorResponse error) => NetworkError(
-  message: error.message,
-  status: error.status,
-  url: error.url,
-  responseMessage: error.responseMessage,
-);
+      message: error.message,
+      status: error.status,
+      url: error.url,
+      responseMessage: error.responseMessage,
+    );

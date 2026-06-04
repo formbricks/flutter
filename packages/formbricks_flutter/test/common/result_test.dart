@@ -19,9 +19,9 @@ void main() {
 
     test('can be matched exhaustively with a switch', () {
       String describe(Result<int, String> r) => switch (r) {
-        Ok(:final value) => 'ok:$value',
-        Err(:final error) => 'err:$error',
-      };
+            Ok(:final value) => 'ok:$value',
+            Err(:final error) => 'err:$error',
+          };
 
       expect(describe(const Result.ok(1)), 'ok:1');
       expect(describe(const Result.err('x')), 'err:x');

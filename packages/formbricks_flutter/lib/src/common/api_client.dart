@@ -127,8 +127,7 @@ class ApiClient {
       method: 'GET',
       endpoint: '/api/v2/client/$workspaceId/environment',
       parse: (data) {
-        final inner =
-            (data['data'] as Map?)?.cast<String, dynamic>() ??
+        final inner = (data['data'] as Map?)?.cast<String, dynamic>() ??
             <String, dynamic>{};
         if (inner['settings'] == null) {
           if (inner['workspace'] != null) {
@@ -153,14 +152,17 @@ class ApiClient {
   /// backend infers the attribute type from the JSON type). Any `DateTime`
   /// attribute must already be an ISO string before reaching this layer.
   Future<Result<CreateOrUpdateUserResponse, ApiErrorResponse>>
-  createOrUpdateUser({
+      createOrUpdateUser({
     required String userId,
     Map<String, Object?>? attributes,
   }) {
     return _request<CreateOrUpdateUserResponse>(
       method: 'POST',
       endpoint: '/api/v2/client/$workspaceId/user',
-      body: {'userId': userId, 'attributes': ?attributes},
+      body: {
+        'userId': userId,
+        if (attributes != null) 'attributes': attributes,
+      },
       parse: CreateOrUpdateUserResponse.fromJson,
     );
   }
