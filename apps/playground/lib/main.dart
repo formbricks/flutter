@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:formbricks_flutter/formbricks_flutter.dart';
 
 /// Credentials are injected at build time, mirroring the React Native
 /// playground's use of `EXPO_PUBLIC_*` env vars. Pass them via `--dart-define`

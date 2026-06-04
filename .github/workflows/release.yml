@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "*.*.*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Release Flutter SDK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Dart for pub.dev OIDC
+        uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version-file: .fvmrc
+          cache: true
+
+      - name: Install dependencies
+        run: make deps-lockfile
+
+      - name: Check formatting
+        run: make format-check
+
+      - name: Analyze
+        run: make analyze-ci
+
+      - name: Run SDK package tests with coverage
+        run: make test-sdk-coverage
+
+      - name: Run playground tests
+        run: make test-playground
+
+      - name: Run publish dry run
+        run: make pub-publish-dry-run
+
+      - name: Publish to pub.dev
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          PUB_PUBLISH_ENABLED: ${{ vars.PUB_PUBLISH_ENABLED }}
+        run: |
+          # Fail-safe: publishing is irreversible, so it's gated on PUB_PUBLISH_ENABLED.
+          # First resolve the pub.dev name (taken; latest 0.0.7), bump version, drop publish_to: none.
+          if [ "$PUB_PUBLISH_ENABLED" != "true" ]; then
+            echo "::notice::Publish skipped — set repository variable PUB_PUBLISH_ENABLED=true to enable (see prerequisites in release.yml)."
+            exit 0
+          fi
+          make pub-publish-force

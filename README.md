@@ -9,11 +9,81 @@ surveys inside a WebView backed by `{appUrl}/js/surveys.umd.cjs`.
 > `welcome()`. The public API, survey rendering, CI, and pub.dev publishing land
 > in follow-up work — see [Roadmap](#roadmap).
 
+## Quick Start
+
+Run commands from the repo root unless a step says otherwise.
+
+### 1. Install platform prerequisites
+
+FVM installs the Flutter SDK for this project, but you still need the native
+tooling for the platform you want to run:
+
+- **iOS simulator:** macOS with Xcode installed. Also run
+  `xcode-select --install` once so command-line tools are available.
+- **Android emulator:** Android Studio with the Android SDK, Platform Tools,
+  and at least one Android Virtual Device (AVD) created in Device Manager.
+
+If you only plan to run one platform, you only need that platform's tooling.
+
+### 2. Install FVM
+
+FVM reads `.fvmrc` and downloads the exact Flutter version used by this repo.
+On macOS, Homebrew is the easiest install path:
+
+```bash
+brew tap leoafarias/fvm
+brew install fvm
+```
+
+If you already have Dart on your machine, this also works:
+
+```bash
+dart pub global activate fvm
+```
+
+### 3. Install the pinned Flutter SDK
+
+```bash
+fvm install
+make doctor
+```
+
+`fvm install` downloads the Flutter version from `.fvmrc` (currently `3.44.0`).
+`make doctor` checks the local iOS/Android tooling with the pinned Flutter SDK.
+Fix the red `✗` items for the platform you want to run, then run the doctor
+command again.
+
+### 4. Fetch dependencies
+
+```bash
+make deps
+```
+
+This resolves the whole Dart pub workspace from the root `pubspec.yaml` and
+uses the shared `pubspec.lock`.
+
+### 5. Run the playground app
+
+```bash
+make run            # iOS simulator, default
+make run android    # Android emulator
+```
+
+The Makefile delegates to `tool/run.sh`, boots a simulator/emulator when it can,
+then runs `apps/playground`. Once the app is running, press `r` for hot reload,
+`R` for hot restart, and `q` to quit.
+
+You should see a **"Welcome to Formbricks"** header and six SDK-test buttons
+(track / setUserId / setAttributes ×2 / setLanguage / logout). They are inert
+stubs — each shows a "not wired to the SDK yet" snackbar — until the SDK API
+lands in follow-up work.
+
 ## Repository layout
 
 ```
 flutter/
 ├── pubspec.yaml                 # pub workspace root + Melos script config (never published)
+├── Makefile                     # daily dev + CI command entry point
 ├── analysis_options.yaml        # shared analyzer + lint rules for every package
 ├── sonar-project.properties     # SonarCloud config (finalised in a follow-up)
 ├── LICENSE                      # MIT
@@ -58,24 +128,47 @@ Uses **Dart pub workspaces** (Dart ≥ 3.6) + **[Melos](https://melos.invertase.
 
 ### Common commands
 
-All run from the repo root. The Flutter version is pinned with **fvm** (see
-[Toolchain](#toolchain)), so prefix Flutter/Dart calls with `fvm` to use the
-exact pinned SDK:
+All run from the repo root. Use the Makefile for normal development; it uses
+`fvm flutter` / `fvm dart` when FVM is installed and falls back to `flutter` /
+`dart` from `PATH` otherwise.
 
 ```bash
-fvm flutter pub get              # resolve the whole workspace (one lockfile)
-fvm dart run melos run analyze   # dart analyze --fatal-infos across all packages
-fvm dart run melos run format    # dart format .
-fvm dart run melos run format-check          # CI: fail if unformatted
-fvm dart run melos run test --no-select      # flutter test in every package
-fvm dart run melos run test-coverage --no-select
+make help          # list available targets
+make deps          # resolve the whole workspace (one lockfile)
+make format        # format Dart code
+make format-check  # CI-style formatting check
+make analyze       # analyze all packages
+make test          # run tests in packages that have test/
+make coverage      # run tests with coverage
+make check         # format-check + analyze + test
 ```
 
-> - `--no-select` skips Melos's interactive package picker — required in CI and
->   any non-TTY shell.
-> - `fvm dart run melos` runs the workspace's pinned Melos under the pinned SDK.
->   If you prefer the global `melos` binary (`dart pub global activate melos`),
->   run it as `fvm exec melos run …` so it still uses the pinned Flutter.
+Important daily commands:
+
+```bash
+make deps
+make run
+make run android
+make format
+make analyze
+make test
+make check
+```
+
+CI/parity targets are also available when you need to reproduce workflow steps:
+
+```bash
+make deps-lockfile
+make analyze-ci
+make test-sdk-machine
+make test-sdk-coverage
+make test-playground
+make build-android
+make build-ios-no-codesign
+make pana-install
+make pana
+make pub-publish-dry-run
+```
 
 ## Conventions
 
@@ -100,30 +193,21 @@ These are locked in for all follow-up work (full rationale in the RN repo's
   `http`'s `MockClient` — no real network.
 - **Targets.** iOS + Android only for v1. A `kIsWeb` guard throws on Flutter Web.
 
-## Toolchain
+## Toolchain details
 
-The exact Flutter version is pinned in **`.fvmrc`** (currently `3.44.0`, which
-ships Dart 3.12) and managed with [fvm](https://fvm.app). Pinning means every
-contributor and CI run uses a byte-identical SDK — no "works on my machine"
-version drift.
+The exact Flutter version is pinned in **`.fvmrc`** and managed with
+[fvm](https://fvm.app). Pinning means every contributor and CI run uses the same
+SDK version.
 
-First-time setup:
-
-```bash
-dart pub global activate fvm     # install the fvm tool (one-time, global)
-fvm install                      # download the version from .fvmrc into fvm's cache
-fvm flutter pub get              # resolve the workspace
-```
-
-- fvm itself needs a Dart/Flutter on `PATH` only to bootstrap; it then downloads
-  and isolates the pinned Flutter under `~/fvm/versions/` — you don't clone
-  Flutter by hand. `.fvm/flutter_sdk` (a symlink to the active version) and the
-  version cache are git-ignored; only `.fvmrc` is committed.
-- Editors: point your editor's Flutter/Dart SDK path at `.fvm/flutter_sdk` so
-  analysis uses the pinned SDK.
-- Bumping the version: `fvm use <version> --force`, commit the changed `.fvmrc`.
-- fvm docs: <https://fvm.app>. Flutter floor enforced by pubspecs: ≥ 3.22 / Dart
-  ≥ 3.12.
+- FVM downloads Flutter into its own cache under `~/fvm/versions/`; you do not
+  clone Flutter by hand.
+- `.fvm/flutter_sdk` is a local symlink to the active SDK and is git-ignored.
+  Only `.fvmrc` is committed.
+- Editors should use `.fvm/flutter_sdk` as the Flutter/Dart SDK path so analysis
+  and code completion use the pinned SDK.
+- Bump the repo's Flutter version with `fvm use <version> --force`, then commit
+  the changed `.fvmrc`.
+- Floors: published SDK = Flutter ≥ 3.27 / Dart ≥ 3.6; dev tooling pins a newer SDK via `.fvmrc`.
 
 ## Running the demo app
 
@@ -132,48 +216,50 @@ project. Note that `flutter run` cannot boot a simulator on its own: with no
 device running it falls back to the macOS desktop target (which this app does
 not support), so a simulator/emulator must be started first.
 
-**Easiest — one command** (boots the device if needed, then runs):
+### One-command run
 
 ```bash
-# one-time: copy the template and fill in your workspace credentials
-cp apps/playground/.env.example apps/playground/.env
-
-./tool/run.sh            # iOS simulator (default)
-./tool/run.sh android    # Android emulator
-# or via Melos (package.json-style scripts, see Monorepo tooling):
-melos run ios
-melos run android
+make run            # iOS simulator (default)
+make run android    # Android emulator
 ```
 
-`tool/run.sh` auto-passes `apps/playground/.env` to the app via
-`--dart-define-from-file` (the `.env` is git-ignored). You can still override
-with explicit `--dart-define=APP_URL=… --dart-define=WORKSPACE_ID=…` flags.
+Or call the underlying script directly after `make deps`:
 
-**Manual CLI:** a simulator/emulator must be booted *first* — `flutter run`
-never boots one itself. Start a device, then target it by name:
+```bash
+./tool/run.sh
+./tool/run.sh android
+```
+
+### Device checks
+
+Use these commands when the run script cannot find a device:
+
+```bash
+make emulators   # configured simulators/emulators Flutter can launch
+make devices     # currently running simulators/emulators/devices
+```
+
+For Android, if no emulator appears in `make emulators`, create an AVD in
+Android Studio's Device Manager first.
+
+### Manual CLI run
+
+A simulator/emulator must be booted *first* — `flutter run` never boots one
+itself. Start a device, then target it by id or name substring:
 
 ```bash
 fvm flutter emulators --launch apple_ios_simulator   # iOS sim
 # or: fvm flutter emulators --launch Pixel_9a         # Android emulator
 cd apps/playground
-fvm flutter run -d iphone        # iOS;  -d emulator  for Android.
-                                 # -d matches a device NAME/id substring, NOT the
-                                 # platform — `-d ios` will NOT match, and with no
-                                 # device booted this falls back to the
-                                 # (unsupported) macOS desktop target.
+fvm flutter run -d iphone        # iOS, if the simulator name contains "iphone"
+fvm flutter run -d emulator      # Android, if the emulator id contains "emulator"
 ```
 
-> First Android build is slow — Gradle downloads the NDK + CMake (~3 GB,
-> one-time) before compiling. Subsequent builds reuse them.
+`-d` matches a device id or name substring, not a platform name. For example,
+`-d ios` does not mean "run on iOS".
 
-Once running, the `flutter run` session is interactive: press **`r`** for hot
-reload, **`R`** for hot restart, **`q`** to quit. `./tool/run.sh` keeps that
-session in your terminal, so hot reload works there too.
-
-You should see a **"Welcome to Formbricks"** header and six SDK-test buttons
-(track / setUserId / setAttributes ×2 / setLanguage / logout). They are inert
-stubs — each shows a "not wired to the SDK yet" snackbar — until the SDK API
-lands in follow-up work.
+First Android build is slow because Gradle downloads the NDK and CMake
+(approximately 3 GB, one-time). Subsequent builds reuse them.
 
 ## Roadmap
 
