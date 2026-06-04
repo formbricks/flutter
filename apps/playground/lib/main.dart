@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:formbricks_flutter/formbricks_flutter.dart';
 
 const kWelcomeMessage = 'Welcome to Formbricks';
 

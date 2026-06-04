@@ -1,0 +1,80 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# The declared floor (Flutter 3.27) isn't run here — dev tooling (melos, flutter_lints)
+# needs a newer SDK. It's validated by the dry-run + pana jobs instead.
+jobs:
+  test:
+    name: Unit Tests (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned dev SDK (.fvmrc) — the gate.
+          - id: pinned
+            channel: stable
+            flutter-version-file: .fvmrc
+            deps-target: deps-lockfile
+            experimental: false
+          # Latest beta — non-blocking forward canary.
+          - id: beta
+            channel: beta
+            flutter-version-file: ""
+            deps-target: deps
+            experimental: true
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: ${{ matrix.channel }}
+          flutter-version-file: ${{ matrix.flutter-version-file }}
+          cache: true
+
+      - name: Install dependencies
+        env:
+          DEPS_TARGET: ${{ matrix.deps-target }}
+        run: make "$DEPS_TARGET"
+
+      - name: Run SDK package tests
+        run: make test-sdk-machine
+
+      - name: Run playground app tests
+        run: make test-playground
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flutter-test-reports-${{ matrix.id }}
+          path: test-results/
+          if-no-files-found: ignore
