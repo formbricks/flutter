@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
 
 import '../types/config.dart';
@@ -100,7 +99,22 @@ class ApiClient {
 
     final data =
         (json?['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-    return Result.ok(parse(data));
+    try {
+      return Result.ok(parse(data));
+    } catch (e) {
+      // A 2xx body with a missing/wrong-typed field makes a `fromJson` factory
+      // throw. Normalize that to `network_error` so callers (setup) get an
+      // `Err` and run their error path instead of a bare TypeError/CastError.
+      return Result.err(
+        ApiErrorResponse(
+          code: 'network_error',
+          status: status,
+          message: 'Malformed response',
+          url: url,
+          responseMessage: e.toString(),
+        ),
+      );
+    }
   }
 
   /// Fetches workspace state via `GET /api/v2/client/{workspaceId}/environment`.
@@ -111,8 +125,7 @@ class ApiClient {
   Future<Result<TWorkspaceState, ApiErrorResponse>> getWorkspaceState() {
     return _request<TWorkspaceState>(
       method: 'GET',
-      endpoint:
-          '/api/v2/client/$workspaceId/environment?rand=${clock.now().millisecondsSinceEpoch}',
+      endpoint: '/api/v2/client/$workspaceId/environment',
       parse: (data) {
         final inner =
             (data['data'] as Map?)?.cast<String, dynamic>() ??

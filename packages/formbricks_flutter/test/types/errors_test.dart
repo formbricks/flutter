@@ -7,7 +7,16 @@ void main() {
     expect(FormbricksErrorCode.networkError.wire, 'network_error');
     expect(FormbricksErrorCode.notSetup.wire, 'not_setup');
     expect(FormbricksErrorCode.forbidden.wire, 'forbidden');
+    expect(FormbricksErrorCode.setupCooldown.wire, 'setup_cooldown');
     expect(FormbricksErrorCode.invalidCode.wire, 'invalid_code');
+  });
+
+  test('SetupCooldownError carries the code and retryAt', () {
+    final retryAt = DateTime(2026, 6, 1, 12);
+    final error = SetupCooldownError(retryAt: retryAt);
+    expect(error.code, FormbricksErrorCode.setupCooldown);
+    expect(error.retryAt, retryAt);
+    expect(error.toString(), contains('setup_cooldown'));
   });
 
   test('MissingFieldError defaults and overrides its message', () {

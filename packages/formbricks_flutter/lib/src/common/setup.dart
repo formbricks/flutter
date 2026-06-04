@@ -68,7 +68,9 @@ Future<Result<void, FormbricksError>> setup({
     final expiresAt = existing.status.expiresAt;
     if (expiresAt != null && !isNowExpired(expiresAt)) {
       Logger.debug('Within error cooldown. Skipping setup.');
-      return const Result.ok(null);
+      // The SDK stays inert during cooldown, so report an Err — not Ok — so
+      // callers don't mistake the suppressed-retry state for "ready".
+      return Result.err(SetupCooldownError(retryAt: expiresAt));
     }
     Logger.debug('Error cooldown elapsed. Continuing with setup.');
   }
@@ -83,7 +85,9 @@ Future<Result<void, FormbricksError>> setup({
     return Result.err(MissingFieldError('appUrl'));
   }
   final uri = Uri.tryParse(appUrl);
-  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+  if (uri == null ||
+      (uri.scheme != 'http' && uri.scheme != 'https') ||
+      uri.host.isEmpty) {
     Logger.debug('appUrl is not a valid http(s) URL');
     return Result.err(
       MissingFieldError(
@@ -93,10 +97,14 @@ Future<Result<void, FormbricksError>> setup({
     );
   }
 
+  // Strip any trailing slash so endpoints (which all start with `/api/...`)
+  // don't produce a double-slash URL the backend won't route.
+  final normalizedAppUrl = appUrl.replaceAll(RegExp(r'/+$'), '');
+
   Logger.debug('Start setup');
 
   final api = ApiClient(
-    appUrl: appUrl,
+    appUrl: normalizedAppUrl,
     workspaceId: workspaceId,
     client: httpClient,
     isDebug: logLevel == LogLevel.debug,
@@ -106,7 +114,7 @@ Future<Result<void, FormbricksError>> setup({
       existing != null &&
       existing.workspace != null &&
       existing.workspaceId == workspaceId &&
-      existing.appUrl == appUrl;
+      existing.appUrl == normalizedAppUrl;
 
   // The ticker takes ownership of `api` for its lifetime; every other path must
   // close it so error/early-return/no-ticker paths don't leak the http.Client.
@@ -124,7 +132,7 @@ Future<Result<void, FormbricksError>> setup({
           await config.update(
             TConfig(
               workspaceId: workspaceId,
-              appUrl: appUrl,
+              appUrl: normalizedAppUrl,
               workspace: value,
               user: TUserState.defaultNoUserId,
               filteredSurveys: const [],

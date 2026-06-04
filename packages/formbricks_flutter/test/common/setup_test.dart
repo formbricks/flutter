@@ -113,6 +113,42 @@ void main() {
     expect((_errOf(result) as MissingFieldError).field, 'appUrl');
   });
 
+  test('hostless appUrl is rejected', () async {
+    final mock = MockClient((_) async => http.Response(_envBody(), 200));
+    final result = await setup(
+      appUrl: 'http://',
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+    );
+    expect((_errOf(result) as MissingFieldError).field, 'appUrl');
+  });
+
+  test('a trailing slash in appUrl is stripped before requesting', () async {
+    late Uri requested;
+    final mock = MockClient((req) async {
+      requested = req.url;
+      return http.Response(_envBody(), 200);
+    });
+
+    final result = await setup(
+      appUrl: 'https://app.formbricks.com/',
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+    );
+
+    expect(result.isOk, isTrue);
+    // No double slash before /api.
+    expect(requested.path, '/api/v2/client/$_workspaceId/environment');
+    expect(requested.toString(), isNot(contains('com//')));
+    // Persisted appUrl is the normalized form.
+    expect(
+      FormbricksConfig.instance.get().appUrl,
+      'https://app.formbricks.com',
+    );
+  });
+
   test('is idempotent — the second call makes no HTTP request', () async {
     var calls = 0;
     final mock = MockClient((_) async {
@@ -191,7 +227,11 @@ void main() {
     });
 
     expect(calls, 0);
-    expect(result.isOk, isTrue);
+    expect(_errOf(result), isA<SetupCooldownError>());
+    expect(
+      (_errOf(result) as SetupCooldownError).retryAt,
+      now.add(const Duration(minutes: 10)),
+    );
   });
 
   test(

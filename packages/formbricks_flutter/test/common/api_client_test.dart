@@ -144,6 +144,32 @@ void main() {
         'network_error',
       );
     });
+
+    test('maps a 200 with a malformed body to network_error', () async {
+      // 2xx, but data.expiresAt is missing → TWorkspaceState.fromJson throws.
+      // Must normalize to Err(network_error), not leak a raw TypeError.
+      final mock = MockClient(
+        (req) async => http.Response(
+          jsonEncode({
+            'data': {
+              'data': {'surveys': <dynamic>[], 'actionClasses': <dynamic>[]},
+            },
+          }),
+          200,
+        ),
+      );
+      final error = _errOf(await _client(mock).getWorkspaceState());
+      expect(error.code, 'network_error');
+      expect(error.status, 200);
+      expect(error.message, 'Malformed response');
+    });
+
+    test('maps a 200 with an empty body to network_error', () async {
+      final mock = MockClient((req) async => http.Response('', 200));
+      final error = _errOf(await _client(mock).getWorkspaceState());
+      expect(error.code, 'network_error');
+      expect(error.status, 200);
+    });
   });
 
   group('createOrUpdateUser', () {

@@ -13,6 +13,9 @@ enum FormbricksErrorCode {
   /// The backend rejected the request (auth / 404 environment).
   forbidden('forbidden'),
 
+  /// `setup()` was called while the SDK is in its post-failure cooldown window.
+  setupCooldown('setup_cooldown'),
+
   /// An invalid code was supplied (reserved for code actions).
   invalidCode('invalid_code');
 
@@ -89,6 +92,22 @@ final class FormbricksSetupError extends FormbricksError {
     String message = 'Could not set up Formbricks',
     FormbricksErrorCode code = FormbricksErrorCode.networkError,
   }) : super(code, message);
+}
+
+/// Returned by `setup()` when it is called while the SDK is still inside the
+/// error cooldown that a previous failed setup opened. The SDK is **not** set up;
+/// callers should retry after [retryAt].
+final class SetupCooldownError extends FormbricksError {
+  /// Creates a cooldown error, optionally carrying the cooldown expiry.
+  SetupCooldownError({this.retryAt})
+    : super(
+        FormbricksErrorCode.setupCooldown,
+        'Formbricks is in an error cooldown after a failed setup. '
+        'Retry later.',
+      );
+
+  /// When the cooldown expires and `setup()` will attempt again, if known.
+  final DateTime? retryAt;
 }
 
 /// A normalized API error returned by [ApiClient]. Distinct from
