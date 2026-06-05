@@ -1,6 +1,4 @@
-/// The public `Formbricks` widget + static SDK facade, ported from the React
-/// Native SDK's `components/formbricks.tsx` (widget) and `index.ts` (static
-/// `track`).
+/// The public `Formbricks` widget and static SDK facade.
 library;
 
 import 'dart:async';
@@ -22,7 +20,7 @@ import 'default_webview_host.dart';
 import 'survey_webview.dart';
 import 'webview_navigation.dart';
 
-/// The Formbricks SDK facade **and** drop-in host widget.
+/// The Formbricks SDK facade and drop-in host widget.
 ///
 /// Place `Formbricks(appUrl: ..., workspaceId: ...)` in your widget tree: it
 /// initializes the SDK on mount (idempotent) and renders any active survey in a
@@ -51,16 +49,16 @@ class Formbricks extends StatefulWidget {
   /// Optional log level (defaults from build mode in `setup`).
   final LogLevel? logLevel;
 
-  /// WebView host builder override (test seam), forwarded to [SurveyWebView].
+  /// WebView host builder override.
   final WebViewHostBuilder? webViewHostBuilder;
 
-  /// External-URL launcher override (test seam), forwarded to [SurveyWebView].
+  /// External-URL launcher override.
   final LaunchUrlFn? launch;
 
-  /// HTTP client override for `setup` (test seam).
+  /// HTTP client override for `setup`.
   final http.Client? httpClient;
 
-  /// Whether the expiry ticker is started by `setup` (test seam).
+  /// Whether the expiry ticker is started by `setup`.
   final bool startTicker;
 
   static final CommandQueue _queue = CommandQueue(
@@ -106,8 +104,7 @@ class Formbricks extends StatefulWidget {
   }
 
   /// Returns the raw JSON the SDK has persisted in `SharedPreferences` (under
-  /// the `formbricks-flutter` key), or `null` if nothing is stored yet. A
-  /// debugging aid; not part of the stable API.
+  /// the `formbricks-flutter` key), or `null` if nothing is stored yet.
   static Future<String?> debugStoredConfig() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(FormbricksConfig.storageKey);
@@ -145,8 +142,7 @@ class _FormbricksState extends State<Formbricks> {
       builder: (context, survey, _) => survey == null
           ? const SizedBox.shrink()
           : SurveyWebView(
-              // A different survey id forces a fresh State (old State.dispose
-              // tears its route down).
+              // A different survey id forces a fresh State and route teardown.
               key: ValueKey<String>(survey.id),
               survey: survey,
               webViewHostBuilder: widget.webViewHostBuilder,

@@ -1,11 +1,9 @@
-/// Builds the survey WebView HTML, ported from the React Native SDK's
-/// `renderHtml` (`survey-web-view.tsx` 320-400).
+/// Builds the survey WebView HTML.
 ///
-/// The body is kept byte-for-byte with RN so the contract with the survey
-/// runtime (`window.formbricksSurveys.renderSurvey({...})`) does not drift. The
-/// only Flutter-specific additions are:
+/// The runtime contract is `window.formbricksSurveys.renderSurvey({...})`. The
+/// Flutter-specific additions are:
 ///   * a `window.ReactNativeWebView` shim that forwards `postMessage` to the
-///     `Formbricks` JavaScript channel (RN's bridge global), and
+///     `Formbricks` JavaScript channel, and
 ///   * a `window.open` override that routes pop-ups through `onOpenExternalURL`
 ///     (Android enables multi-window by default with no public API to disable
 ///     it, and `window.open` bypasses the navigation delegate).
@@ -47,8 +45,7 @@ class SurveyHtmlOptions {
   /// The resolved language code (`'default'` or a specific code).
   final String languageCode;
 
-  /// The resolved styling map, or null to omit the key (matches RN
-  /// `undefined`).
+  /// The resolved styling map, or null to omit the key.
   final Map<String, dynamic>? styling;
 
   /// The contact id, when known.
@@ -63,7 +60,7 @@ class SurveyHtmlOptions {
   /// Overlay mode, when set.
   final String? overlay;
 
-  /// The `renderSurvey` options object (keys + shape match RN exactly).
+  /// The `renderSurvey` options object.
   Map<String, dynamic> toRenderOptions() => {
         'workspaceId': workspaceId,
         if (contactId != null) 'contactId': contactId,
@@ -80,8 +77,7 @@ class SurveyHtmlOptions {
 }
 
 /// Builds the full HTML document that loads `surveys.umd.cjs` and renders the
-/// survey. Returns an empty doc (no script) when the script URL can't be
-/// resolved (invalid/non-http(s) appUrl), matching RN.
+/// survey. Returns an empty doc when the script URL can't be resolved.
 String buildSurveyHtml(SurveyHtmlOptions options) {
   final scriptUrl = getSurveyScriptUrl(options.appUrl);
   if (scriptUrl == null) return _emptyHtml;
@@ -166,7 +162,7 @@ final String _u = '${String.fromCharCode(0x5c)}u';
 /// replacement emits a JS unicode escape that the engine decodes back to the
 /// original character inside the JSON string literal.
 ///
-/// Exposed (not private) so the HTML test can assert the neutralization.
+/// Exposed so tests can assert the neutralization.
 String scriptSafeJson(String json) => json
     .replaceAll('<', '${_u}003c')
     .replaceAll('>', '${_u}003e')

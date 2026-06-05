@@ -1,12 +1,11 @@
-/// Typed survey models, ported from the React Native SDK's `types/survey.ts`.
+/// Typed survey models.
 ///
-/// **Raw-preserving by design.** The full survey object is JSON-serialized into
+/// Raw-preserving by design. The full survey object is JSON-serialized into
 /// the WebView HTML and handed to `window.formbricksSurveys.renderSurvey(...)`,
-/// so it must round-trip losslessly — including every field Dart never reads
-/// (questions, endings, variables, …). Each model therefore keeps the original
+/// so it must round-trip losslessly, including every field Dart never reads
+/// (questions, endings, variables, etc.). Each model therefore keeps the original
 /// decoded map and parses typed getters off it; [TSurvey.toJson] returns that
-/// original map verbatim. This mirrors RN, where `TSurvey` is just a TS
-/// interface over the raw object with no transformation.
+/// original map verbatim.
 library;
 
 /// A single Formbricks survey.

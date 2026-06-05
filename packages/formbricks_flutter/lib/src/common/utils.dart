@@ -1,8 +1,4 @@
-/// Survey rendering helpers ported from the React Native SDK's
-/// `lib/common/utils.ts` — **only** `getLanguageCode`, `getDefaultLanguageCode`,
-/// and `getStyling`. `filterSurveys` and `shouldDisplayBasedOnPercentage` are
-/// intentionally **not** ported here; they belong to the eligibility-filtering
-/// ticket.
+/// Survey rendering helpers.
 library;
 
 import '../types/survey.dart';
@@ -23,8 +19,7 @@ String? getDefaultLanguageCode(TSurvey survey) {
 /// non-default language; and null when the survey is **not available** in the
 /// requested language (the caller must then not present and reset the store).
 ///
-/// Branch order matches RN exactly: the default-language short-circuit happens
-/// *before* the enabled/availability check.
+/// The default-language match is accepted before the enabled check.
 String? getLanguageCode(TSurvey survey, [String? language]) {
   if (language == null) return 'default';
   final lower = language.toLowerCase();
@@ -46,13 +41,7 @@ String? getLanguageCode(TSurvey survey, [String? language]) {
 }
 
 /// Resolves the styling object to hand the survey runtime.
-///
-/// Workspace vs survey-level resolution, ported from RN `getStyling`. Operates
-/// on raw maps so the result round-trips losslessly into the render options.
-/// Returns null only in the (rare) overwrite-enabled branch where the survey
-/// itself carries no styling — the HTML builder then omits the key, matching
-/// JS `JSON.stringify` dropping `undefined`.
-Map<String, dynamic>? getStyling(
+Map<String, dynamic> getStyling(
   Map<String, dynamic> settings,
   TSurvey survey,
 ) {
@@ -60,16 +49,14 @@ Map<String, dynamic>? getStyling(
       (settings['styling'] as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
 
-  // Workspace allows survey-level overrides.
   if (workspaceStyling['allowStyleOverwrite'] == true) {
-    // Survey opts out of overriding the theme: use workspace styling.
-    if (survey.styling?['overwriteThemeStyling'] != true) {
+    final surveyStyling = survey.styling;
+    if (surveyStyling == null ||
+        surveyStyling['overwriteThemeStyling'] != true) {
       return workspaceStyling;
     }
-    // Survey overrides the theme: use survey styling (may be null).
-    return survey.styling;
+    return surveyStyling;
   }
 
-  // Workspace disallows overrides: always use workspace styling.
   return workspaceStyling;
 }

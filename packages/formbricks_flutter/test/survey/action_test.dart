@@ -169,7 +169,7 @@ void main() {
       final config = await _seed(
         _configJson(
           actionClasses: [
-            {'type': 'code', 'name': null}, // name null → parse throws → skip
+            {'type': 'code', 'name': null},
             {'id': 'a', 'name': 'Good', 'type': 'code', 'key': 'good'},
           ],
         ),

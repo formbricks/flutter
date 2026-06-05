@@ -1,9 +1,8 @@
-/// Workspace action-class model, ported from the React Native SDK's
-/// `TWorkspaceStateActionClass` (`types/config.ts` / `types/action-class.ts`).
+/// Workspace action-class model.
 ///
 /// Only the fields `track` needs are modelled: [type] (we match `'code'`),
 /// [key] (the code the host passes), and [name] (used to match survey
-/// triggers). [type] stays a plain `String` for forward-compat with any future
+/// triggers). [type] stays a plain `String` for compatibility with future
 /// server-side action-class type.
 library;
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
 
 import '../types/config.dart';
@@ -26,7 +27,7 @@ class ApiClient {
   /// The workspace scope for all requests.
   final String workspaceId;
 
-  /// When true, adds `Cache-Control: no-cache` to every request.
+  /// When true, bypasses request caches while debugging.
   final bool isDebug;
 
   final http.Client _client;
@@ -43,10 +44,19 @@ class ApiClient {
     required T Function(Map<String, dynamic> data) parse,
     Object? body,
   }) async {
-    final url = Uri.parse('$appUrl$endpoint');
+    var url = Uri.parse('$appUrl$endpoint');
+    // Make newly-created actions and surveys visible immediately in playgrounds.
+    if (isDebug && method == 'GET') {
+      url = url.replace(
+        queryParameters: <String, String>{
+          ...url.queryParameters,
+          '_fb_nocache': clock.now().microsecondsSinceEpoch.toString(),
+        },
+      );
+    }
     final headers = <String, String>{
       'Content-Type': 'application/json',
-      if (isDebug) 'Cache-Control': 'no-cache',
+      if (isDebug) ...{'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     };
 
     http.Response response;

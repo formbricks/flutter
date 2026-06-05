@@ -8,6 +8,7 @@ import 'package:formbricks_flutter/src/survey/survey_store.dart';
 import 'package:formbricks_flutter/src/types/survey.dart';
 import 'package:formbricks_flutter/src/widgets/survey_webview.dart';
 import 'package:formbricks_flutter/src/widgets/webview_event.dart';
+import 'package:formbricks_flutter/src/widgets/webview_navigation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
@@ -22,7 +23,7 @@ class _StubHost {
     required String html,
     required String appUrl,
     required void Function(WebViewEvent event) onEvent,
-    dynamic launch,
+    LaunchUrlFn? launch,
   }) {
     this.onEvent = onEvent;
     this.html = html;
@@ -60,9 +61,7 @@ Future<void> _seedConfig({
 
 TSurvey _survey(Map<String, dynamic> json) => TSurvey.fromJson(json);
 
-/// Reads the persisted config back from the mock store. Used to prove the
-/// handlers actually wrote to disk (not just to the in-memory config, which
-/// `get()` returns even when the disk write is skipped).
+/// Reads the persisted config back from the mock store.
 Future<Map<String, dynamic>> _storedUserData() async {
   final prefs = await SharedPreferences.getInstance();
   final raw = prefs.getString(FormbricksConfig.storageKey)!;
@@ -151,7 +150,7 @@ void main() {
     );
     await tester.pump(); // _start arms the timer
     expect(find.byKey(_stub), findsNothing);
-    await tester.pump(const Duration(seconds: 2)); // timer fires → _present
+    await tester.pump(const Duration(seconds: 2)); // timer fires
     await tester.pump(); // route push
     expect(find.byKey(_stub), findsOneWidget);
   });

@@ -1,16 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:formbricks_flutter/formbricks_flutter.dart';
 
-/// Default credentials, injected at build time, mirroring the React Native
-/// playground's use of `EXPO_PUBLIC_*` env vars. Pass them via `--dart-define`
-/// (or a local `apps/playground/.env`, which `tool/run.sh` forwards):
-///   --dart-define=APP_URL=https://app.formbricks.com --dart-define=WORKSPACE_ID=wsp_...
-/// They only pre-fill the connection fields below — you can also type them in
-/// at runtime and tap Connect.
 const String _defaultAppUrl = String.fromEnvironment('APP_URL');
 const String _defaultWorkspaceId = String.fromEnvironment('WORKSPACE_ID');
 
-/// Header text. Also referenced by the widget test.
 const String kWelcomeMessage = 'Welcome to Formbricks';
 
 void main() {
@@ -48,8 +41,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     text: _defaultWorkspaceId,
   );
 
-  /// The code action to trigger. Editable so the demo can match whatever code
-  /// action exists in the connected workspace.
   final TextEditingController _codeController = TextEditingController(
     text: 'code',
   );
@@ -59,13 +50,12 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
   String? _connectedAppUrl;
   String? _connectedWorkspaceId;
 
-  /// The last `track(...)` outcome, shown persistently (the snackbar fades).
   String? _lastTrack;
 
   @override
   void initState() {
     super.initState();
-    // Zero-friction path: auto-connect when both were provided via --dart-define.
+    // Auto-connect when both values were provided via --dart-define.
     if (_defaultAppUrl.isNotEmpty && _defaultWorkspaceId.isNotEmpty) {
       _connect();
     }
@@ -90,9 +80,8 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       return;
     }
 
-    // setup() is idempotent and there is no public teardown yet (logout is a
-    // later ticket), so switching to a different workspace mid-session can't
-    // take effect — be honest about it rather than silently no-op.
+    // setup() is idempotent and there is no public teardown yet, so switching
+    // to a different workspace mid-session cannot take effect.
     if (_connected &&
         (appUrl != _connectedAppUrl || workspaceId != _connectedWorkspaceId)) {
       setState(
@@ -103,7 +92,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       return;
     }
 
-    setState(() => _status = 'connecting…');
+    setState(() => _status = 'connecting...');
     try {
       final result = await Formbricks.setup(
         appUrl: appUrl,
@@ -128,11 +117,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     }
   }
 
-  /// Tracks the entered code action through the SDK and reports the Result.
-  ///
-  /// On `ok` with a matching live survey, the [Formbricks] widget below renders
-  /// it in a modal WebView. On `invalid_code` the action doesn't exist in the
-  /// workspace; on `network_error` the device is offline.
   Future<void> _track(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final code = _codeController.text.trim().isEmpty
@@ -142,13 +126,12 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     try {
       final result = await Formbricks.track(code);
       message = switch (result) {
-        Ok() => "track('$code') → ok — a matching survey (if any) will show",
+        Ok() => "track('$code') -> ok - a matching survey may show",
         Err(:final error) =>
-          "track('$code') → ${error.code.wire}: ${error.message}",
+          "track('$code') -> ${error.code.wire}: ${error.message}",
       };
     } on FormbricksError catch (e) {
-      // e.g. not_setup when you haven't connected yet.
-      message = "track('$code') → ${e.code.wire}: ${e.message}";
+      message = "track('$code') -> ${e.code.wire}: ${e.message}";
     }
     if (!mounted) return;
     setState(() => _lastTrack = message);
@@ -159,15 +142,12 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       );
   }
 
-  /// Stub for the SDK calls whose tickets aren't landed yet (identify /
-  /// attributes / language / logout). Confirms the tap so the demo UX can be
-  /// exercised independently of those features.
   void _stub(BuildContext context, String action) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('$action — not wired to the SDK yet'),
+          content: Text('$action - not wired to the SDK yet'),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -197,7 +177,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 const Text(kWelcomeMessage, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
 
-                // --- Connection --------------------------------------------
                 Text('Connection', style: textTheme.titleSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -216,7 +195,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   autocorrect: false,
                   decoration: const InputDecoration(
                     labelText: 'Workspace ID',
-                    hintText: 'wsp_…',
+                    hintText: 'wsp_...',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -233,7 +212,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   textAlign: TextAlign.center,
                   style: textTheme.bodySmall,
                 ),
-                if (_connected && _status != 'connected ✓') ...[
+                if (_connected && _status != 'connected') ...[
                   const SizedBox(height: 4),
                   Text(
                     _status,
@@ -243,7 +222,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ],
                 const Divider(height: 40),
 
-                // --- Track a code action -----------------------------------
                 Text('Track a code action', style: textTheme.titleSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -271,7 +249,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ],
                 const Divider(height: 40),
 
-                // --- Not-yet-wired actions ---------------------------------
                 for (final a in stubActions) ...[
                   FilledButton.tonal(
                     onPressed: () => _stub(context, a.action),
@@ -280,10 +257,8 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   const SizedBox(height: 12),
                 ],
 
-                // Host the SDK widget so a triggered survey can render. It is
-                // zero-size while idle and pushes a modal route when a survey is
-                // active; mounted once connected so it renders against the
-                // connected workspace.
+                // Mounted once connected so triggered surveys can render
+                // against the connected workspace.
                 if (_connected)
                   Formbricks(
                     appUrl: _connectedAppUrl!,

@@ -56,15 +56,11 @@ void main() {
   ) async {
     await tester.pumpWidget(const PlaygroundApp());
 
-    // Without APP_URL/WORKSPACE_ID the SDK is not set up, so track routes
-    // through the command queue and surfaces a not_setup error — proving the
-    // button is wired to the real SDK rather than the stub.
     await tester.tap(find.text('Trigger Code Action'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.textContaining('not wired to the SDK yet'), findsNothing);
-    // The result shows in both the snackbar and the persistent status line.
     expect(find.textContaining("track('code')"), findsWidgets);
   });
 }

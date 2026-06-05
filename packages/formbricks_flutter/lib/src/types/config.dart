@@ -5,8 +5,8 @@
 /// on disk**, and the conversion happens *only* inside the `fromJson` / `toJson`
 /// methods here. No `DateTime.parse` anywhere else in the codebase.
 ///
-/// Survey and action-class entries are intentionally loosely typed
-/// (`Map<String, dynamic>`) until the track + survey-rendering work lands.
+/// Survey and action-class entries stay as raw JSON so render payloads can
+/// round-trip losslessly; use sites parse the fields they need.
 library;
 
 /// Parses an optional ISO-8601 string into a [DateTime]. The single inbound
@@ -311,8 +311,7 @@ class TConfig {
   /// The cached user state (anonymous by default).
   final TUserState user;
 
-  /// Surveys eligible to show. Populated by the filter logic in a later ticket;
-  /// left empty here.
+  /// Surveys eligible to show after filtering.
   final List<dynamic> filteredSurveys;
 
   /// The success/error status.

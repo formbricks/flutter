@@ -1,13 +1,9 @@
-/// The survey WebView host, ported from the React Native SDK's
-/// `survey-web-view.tsx`.
+/// The survey WebView host.
 ///
-/// The survey lifecycle is driven by a **single explicit state machine**
-/// (`idle → loading → presenting → closing`) inside the `State`, rather than
-/// RN's three `useEffect`s (which raced on remount — `docs/FLUTTER_SDK_PLAN.md`
-/// §7 pitfall #5). `build()` always returns a zero-size box; the survey is
-/// shown in a transparent modal route held by this State so every teardown path
-/// (bridge close, Android back, external store reset/unmount) is deterministic
-/// and never touches a deactivated `BuildContext`.
+/// The lifecycle is driven by a single state machine inside the `State`.
+/// `build()` always returns a zero-size box; the survey is shown in a
+/// transparent modal route held by this State so teardown paths never need a
+/// deactivated `BuildContext`.
 library;
 
 import 'dart:async';
@@ -50,10 +46,10 @@ class SurveyWebView extends StatefulWidget {
   /// Store override (defaults to [SurveyStore.instance]).
   final SurveyStore? store;
 
-  /// WebView host builder override (test seam; defaults to [defaultWebViewHost]).
+  /// WebView host builder override.
   final WebViewHostBuilder? webViewHostBuilder;
 
-  /// External-URL launcher override (test seam).
+  /// External-URL launcher override.
   final LaunchUrlFn? launch;
 
   @override
@@ -253,10 +249,8 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     }
     _routeOpen = false;
 
-    // Acceptance criterion: persist config on close. Enqueued LAST so it reads
-    // post-response state — a safe write that can never clobber a pending
-    // display/response op (in this ticket there is no close-time state change,
-    // since filteredSurveys recompute is deferred to the filtering ticket).
+    // Queue the close write after display/response updates so bridge events
+    // cannot overtake each other.
     _enqueueConfigOp(() async {
       final current = _config.getOrNull();
       if (current != null) await _config.update(current);
@@ -276,7 +270,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   @override
   void dispose() {
     _delayTimer?.cancel();
-    // External store reset can unmount us without a close — remove the route
+    // External store reset can unmount us without a close; remove the route
     // via the captured NavigatorState (no live BuildContext required). The
     // isActive guard makes removal idempotent if the route was already popped.
     if (_routeOpen && _route != null && _route!.isActive) {

@@ -11,9 +11,7 @@ import 'logger.dart';
 import 'result.dart';
 import 'time.dart';
 
-/// How long the SDK stays in the error state after a failed first setup before
-/// it will retry. Named constant rather than an inline magic number (RN buried
-/// this as `Date.now() + 10 * 60000`).
+/// How long the SDK waits before retrying after a failed first setup.
 const Duration _kErrorCooldown = Duration(minutes: 10);
 
 bool _isSetup = false;
@@ -42,7 +40,8 @@ void resetSetupForTest() {
 /// **first-setup** network/forbidden failure it persists the error-cooldown
 /// state and **throws** [FormbricksSetupError] (matching the RN SDK).
 ///
-/// [httpClient], [startTicker] and [logLevel] are seams for tests / the demo.
+/// [httpClient], [startTicker] and [logLevel] are overrides for tests and the
+/// playground.
 Future<Result<void, FormbricksError>> setup({
   required String appUrl,
   required String workspaceId,
@@ -50,12 +49,9 @@ Future<Result<void, FormbricksError>> setup({
   LogLevel? logLevel,
   bool startTicker = true,
 }) async {
-  // Configure the logger from build mode here (not deep inside the WebView
-  // widget) so behavior is deterministic: an explicit logLevel wins, otherwise
-  // debug in debug builds and error in release (pitfall #3).
-  Logger.configure(
-    level: logLevel ?? (kDebugMode ? LogLevel.debug : LogLevel.error),
-  );
+  final resolvedLevel =
+      logLevel ?? (kDebugMode ? LogLevel.debug : LogLevel.error);
+  Logger.configure(level: resolvedLevel);
 
   if (_isSetup) {
     Logger.debug('Already set up, skipping setup.');
@@ -66,21 +62,16 @@ Future<Result<void, FormbricksError>> setup({
   await config.init();
   final existing = config.getOrNull();
 
-  // Error-cooldown gate. NOTE: this is the corrected logic — RN skipped setup
-  // when the cooldown had *expired* (a bug). Here: still cooling down (expiresAt
-  // in the future) → short-circuit; cooldown elapsed → clear and continue.
+  // Retry only after the stored first-setup cooldown expires.
   if (existing != null && existing.status.isError) {
     final expiresAt = existing.status.expiresAt;
     if (expiresAt != null && !isNowExpired(expiresAt)) {
       Logger.debug('Within error cooldown. Skipping setup.');
-      // The SDK stays inert during cooldown, so report an Err — not Ok — so
-      // callers don't mistake the suppressed-retry state for "ready".
       return Result.err(SetupCooldownError(retryAt: expiresAt));
     }
     Logger.debug('Error cooldown elapsed. Continuing with setup.');
   }
 
-  // Validation.
   if (workspaceId.isEmpty) {
     Logger.debug('No workspaceId provided');
     return Result.err(MissingFieldError('workspaceId'));
@@ -112,7 +103,7 @@ Future<Result<void, FormbricksError>> setup({
     appUrl: normalizedAppUrl,
     workspaceId: workspaceId,
     client: httpClient,
-    isDebug: logLevel == LogLevel.debug,
+    isDebug: resolvedLevel == LogLevel.debug,
   );
 
   final matches = existing != null &&
@@ -128,7 +119,6 @@ Future<Result<void, FormbricksError>> setup({
       final result = await _syncExistingConfig(config, api, existing);
       if (result case Err()) return result;
     } else {
-      // Fresh setup: reset any stale config, fetch, persist or enter error state.
       await config.reset();
       final response = await api.getWorkspaceState();
       switch (response) {
@@ -144,7 +134,6 @@ Future<Result<void, FormbricksError>> setup({
             ),
           );
         case Err(:final error):
-          // Persists error state and throws FormbricksSetupError.
           await _handleErrorOnFirstSetup(config, error);
       }
     }
@@ -164,9 +153,9 @@ Future<Result<void, FormbricksError>> setup({
 
 /// Sync path when the cached config already matches the requested workspace/app:
 /// refresh the user if it expired while identified, then persist. The workspace
-/// is always still valid here — `FormbricksConfig.init` discards any cached
-/// config whose workspace has expired before we reach this point. Returns
-/// `Err(NetworkError)` on failure (does not throw — only first-setup throws).
+/// is always still valid here because `FormbricksConfig.init` discards any
+/// cached config whose workspace has expired before we reach this point. Returns
+/// `Err(NetworkError)` on failure; only first setup throws.
 Future<Result<void, FormbricksError>> _syncExistingConfig(
   FormbricksConfig config,
   ApiClient api,
@@ -176,7 +165,6 @@ Future<Result<void, FormbricksError>> _syncExistingConfig(
 
   final workspace = existing.workspace!;
 
-  // User.
   TUserState user;
   final existingUser = existing.user;
   final userExpiresAt = existingUser.expiresAt;

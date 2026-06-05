@@ -1,13 +1,7 @@
-/// Typed, sealed model for messages the survey runtime posts back to Dart.
+/// Typed model for messages the survey runtime posts back to Dart.
 ///
-/// Replaces the React Native SDK's free-form `JSON.parse` + Zod + sequential
-/// `if (onClose) / if (onDisplayCreated) / …` chain (`survey-web-view.tsx`
-/// 171–267) with a hand-rolled validator and a `sealed` event type, so adding a
-/// new event becomes a compile error if a handler doesn't cover it.
-///
-/// A single posted payload may carry several flags, and RN processes each
-/// independently — so the parser returns a **list** of events (in RN's handler
-/// order) rather than collapsing to one.
+/// A posted payload can carry several lifecycle flags, so the parser returns a
+/// list of events in handler order instead of collapsing to one.
 library;
 
 import 'dart:convert';
@@ -55,15 +49,15 @@ final class ConsoleEvent extends WebViewEvent {
   final String log;
 }
 
-/// Parses one JS→Dart payload into zero or more [WebViewEvent]s.
+/// Parses one JS-to-Dart payload into zero or more [WebViewEvent]s.
 ///
 /// - Malformed input (not JSON / not an object / a flag with a non-bool value /
 ///   a non-object `onOpenExternalURLParams` / an external-URL event missing a
-///   string `url`) is **logged and dropped** (returns `const []`), never thrown.
+///   string `url`) is logged and dropped, never thrown.
 /// - A `Console` payload maps to a single [ConsoleEvent] (mutually exclusive,
-///   like RN which returns early after console).
-/// - Otherwise one event is emitted per truthy flag, in RN's handler order
-///   (display → response → open-external-url → close). A well-formed but
+///   like the runtime handler).
+/// - Otherwise one event is emitted per truthy flag, in handler order
+///   (display, response, open-external-url, close). A well-formed but
 ///   non-actionable payload (e.g. `{onFinished:true}`) yields `const []`
 ///   quietly.
 List<WebViewEvent> parseWebViewEvents(String raw) {

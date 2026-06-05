@@ -1,7 +1,7 @@
-/// Action tracking, ported from the React Native SDK's `lib/survey/action.ts`
-/// — **minus** eligibility filtering and the `displayPercentage` gate (those
-/// belong to the filtering ticket). For this ticket `track` matches triggers
-/// against the full cached survey list and shows any match.
+/// Tracks code actions against cached workspace surveys.
+///
+/// This layer only matches action classes and leaves eligibility filtering to
+/// the survey selection pipeline.
 library;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -14,26 +14,19 @@ import '../types/errors.dart';
 import '../types/survey.dart';
 import 'survey_store.dart';
 
-/// Signature for the connectivity check — injectable so tests don't hit the
-/// platform channel.
+/// Connectivity check used by [track].
 typedef ConnectivityCheck = Future<bool> Function();
 
-/// Default connectivity check via `connectivity_plus`: connected when any
-/// transport other than `none` is reported.
 Future<bool> _defaultIsConnected() async {
   final results = await Connectivity().checkConnectivity();
   return results.any((r) => r != ConnectivityResult.none);
 }
 
-/// Marks [survey] for display by handing it to the [SurveyStore].
-///
-/// No `displayPercentage` gate (excluded from this ticket).
+/// Marks [survey] for display.
 void triggerSurvey(TSurvey survey, {SurveyStore? store}) =>
     (store ?? SurveyStore.instance).setSurvey(survey);
 
-/// Walks the cached surveys and triggers any whose trigger action-class name
-/// matches [name]. Returns `Ok` (the only failure modes — bad input / offline —
-/// are handled by [track]).
+/// Triggers cached surveys whose action-class name matches [name].
 Future<Result<void, FormbricksError>> trackAction(
   String name, {
   String? alias,
@@ -51,7 +44,7 @@ Future<Result<void, FormbricksError>> trackAction(
 
   for (final entry in rawSurveys) {
     final survey = _tryParseSurvey(entry);
-    if (survey == null) continue; // malformed cache entry: logged + skipped
+    if (survey == null) continue;
     for (final trigger in survey.triggers) {
       if (trigger.actionClass.name == name) {
         triggerSurvey(survey, store: store);
@@ -61,13 +54,7 @@ Future<Result<void, FormbricksError>> trackAction(
   return const Result.ok(null);
 }
 
-/// Tracks a **code** action by [code].
-///
-/// 1. Read config first (matches RN order).
-/// 2. Connectivity guard — if offline (or the check throws), return a detailed
-///    `network_error` so we never render a WebView that can't load the runtime.
-/// 3. Look up the `code` action class by `key == code`; unknown → `invalid_code`.
-/// 4. Delegate to [trackAction] using the action-class name.
+/// Tracks a code action by [code].
 Future<Result<void, FormbricksError>> track(
   String code, {
   FormbricksConfig? config,
@@ -82,8 +69,6 @@ Future<Result<void, FormbricksError>> track(
     try {
       connected = await (isConnected ?? _defaultIsConnected)();
     } catch (_) {
-      // A thrown connectivity check counts as offline (not the generic catch),
-      // so callers still get the specific offline error.
       connected = false;
     }
     if (!connected) {

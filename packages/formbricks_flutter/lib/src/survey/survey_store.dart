@@ -1,9 +1,4 @@
-/// The single active-survey store, ported from the React Native SDK's
-/// `lib/survey/store.ts`.
-///
-/// RN exposed it via `useSyncExternalStore`; here it is a `ValueNotifier` so the
-/// `Formbricks` widget can rebuild through a `ValueListenableBuilder`. Singleton,
-/// matching the rest of the SDK.
+/// The single active-survey store.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -27,11 +22,9 @@ class SurveyStore {
   /// The currently-active survey, or null.
   TSurvey? get survey => _notifier.value;
 
-  /// Sets [survey] as active, notifying listeners **only when the id changes**
-  /// (mirrors RN's id-guard — re-setting the same survey is a no-op).
+  /// Sets [survey] as active, notifying listeners only when the id changes.
   void setSurvey(TSurvey survey) {
     if (_notifier.value?.id != survey.id) {
-      // Assigning a value different from the current one notifies listeners.
       _notifier.value = survey;
     }
   }
@@ -43,7 +36,7 @@ class SurveyStore {
     }
   }
 
-  /// Disposes the notifier and drops the singleton. Test-only.
+  /// Disposes the notifier and drops the singleton for tests.
   @visibleForTesting
   static void resetInstance() {
     _instance?._notifier.dispose();

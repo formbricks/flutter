@@ -10,6 +10,7 @@ import 'package:formbricks_flutter/src/types/survey.dart';
 import 'package:formbricks_flutter/src/widgets/formbricks_widget.dart';
 import 'package:formbricks_flutter/src/widgets/survey_webview.dart';
 import 'package:formbricks_flutter/src/widgets/webview_event.dart';
+import 'package:formbricks_flutter/src/widgets/webview_navigation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,7 @@ class _StubHost {
     required String html,
     required String appUrl,
     required void Function(WebViewEvent event) onEvent,
-    dynamic launch,
+    LaunchUrlFn? launch,
   }) {
     this.onEvent = onEvent;
     return const SizedBox(key: Key('stub-webview'), width: 50, height: 50);
@@ -109,8 +110,8 @@ void main() {
     SurveyStore.instance.setSurvey(
       TSurvey.fromJson({'id': 's1', 'languages': <dynamic>[]}),
     );
-    await tester.pump(); // host rebuild → SurveyWebView mounts
-    await tester.pump(); // post-frame _start → _present
+    await tester.pump(); // host rebuild
+    await tester.pump(); // post-frame _start
     await tester.pump(); // route push
 
     expect(find.byType(SurveyWebView), findsOneWidget);

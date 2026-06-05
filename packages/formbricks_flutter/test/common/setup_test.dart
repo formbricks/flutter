@@ -410,7 +410,7 @@ void main() {
       httpClient: mock,
       startTicker: false,
     );
-    // `flutter test` runs in debug mode (kDebugMode == true) → debug level.
+    // `flutter test` runs in debug mode.
     expect(Logger.level, LogLevel.debug);
   });
 

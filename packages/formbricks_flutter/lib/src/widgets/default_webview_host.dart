@@ -28,17 +28,11 @@ typedef WebViewHostBuilder = Widget Function(
 
 /// The production [WebViewHostBuilder] backed by `webview_flutter`.
 ///
-/// Security hardening (`docs/FLUTTER_SDK_PLAN.md` §6):
-///   * JavaScript enabled per-controller only (this survey HTML).
-///   * Same-origin top-level navigation; cross-origin main-frame nav opens in
-///     the external browser via [openExternalUrl]; cross-origin sub-frame nav
-///     is blocked in place.
-///   * Android file/content access explicitly disabled (platform default is
-///     `true` on API < 30).
-///   * Cache + local storage cleared before each load so nothing persists
-///     beyond the survey lifetime.
-///   * No `baseUrl` (RN parity): the injected document gets an opaque origin and
-///     is not granted the workspace's first-party storage/cookies.
+/// Returns a [StatefulWidget] so the [WebViewController] is created once and
+/// survives rebuilds of the surrounding modal (e.g. when the soft keyboard
+/// changes `MediaQuery.viewInsets` and the keyboard-avoiding padding rebuilds).
+/// Creating the controller per build would reload the survey on every keystroke
+/// and make it appear to close.
 Widget defaultWebViewHost(
   BuildContext context, {
   required String html,
@@ -46,39 +40,88 @@ Widget defaultWebViewHost(
   required void Function(WebViewEvent event) onEvent,
   LaunchUrlFn? launch,
 }) {
-  final controller = WebViewController()
-    ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    ..setBackgroundColor(const Color(0x00000000))
-    ..addJavaScriptChannel(
-      'Formbricks',
-      onMessageReceived: (JavaScriptMessage message) {
-        for (final event in parseWebViewEvents(message.message)) {
-          onEvent(event);
-        }
-      },
-    )
-    ..setNavigationDelegate(
-      NavigationDelegate(
-        onNavigationRequest: (request) {
-          switch (decideNavigation(
-            request.url,
-            appUrl,
-            isMainFrame: request.isMainFrame,
-          )) {
-            case NavAction.allow:
-              return NavigationDecision.navigate;
-            case NavAction.openExternally:
-              unawaited(openExternalUrl(request.url, launch: launch));
-              return NavigationDecision.prevent;
-            case NavAction.block:
-              return NavigationDecision.prevent;
+  return _DefaultWebViewHost(
+    html: html,
+    appUrl: appUrl,
+    onEvent: onEvent,
+    launch: launch,
+  );
+}
+
+class _DefaultWebViewHost extends StatefulWidget {
+  const _DefaultWebViewHost({
+    required this.html,
+    required this.appUrl,
+    required this.onEvent,
+    this.launch,
+  });
+
+  final String html;
+  final String appUrl;
+  final void Function(WebViewEvent event) onEvent;
+  final LaunchUrlFn? launch;
+
+  @override
+  State<_DefaultWebViewHost> createState() => _DefaultWebViewHostState();
+}
+
+class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created once. Callbacks read widget.* so they always see current values.
+    //
+    // Security hardening:
+    //   * JavaScript enabled per-controller only (this survey HTML).
+    //   * Same-origin top-level navigation; cross-origin main-frame nav opens in
+    //     the external browser via [openExternalUrl]; cross-origin sub-frame nav
+    //     is blocked in place.
+    //   * Android file/content access explicitly disabled (platform default is
+    //     `true` on API < 30).
+    //   * Cache + local storage cleared before load so nothing persists beyond
+    //     the survey lifetime.
+    //   * No `baseUrl`: the injected document gets an opaque origin and is not
+    //     granted the workspace's first-party storage/cookies.
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..addJavaScriptChannel(
+        'Formbricks',
+        onMessageReceived: (JavaScriptMessage message) {
+          for (final event in parseWebViewEvents(message.message)) {
+            widget.onEvent(event);
           }
         },
-      ),
-    );
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) {
+            switch (decideNavigation(
+              request.url,
+              widget.appUrl,
+              isMainFrame: request.isMainFrame,
+            )) {
+              case NavAction.allow:
+                return NavigationDecision.navigate;
+              case NavAction.openExternally:
+                unawaited(
+                  openExternalUrl(request.url, launch: widget.launch),
+                );
+                return NavigationDecision.prevent;
+              case NavAction.block:
+                return NavigationDecision.prevent;
+            }
+          },
+        ),
+      );
 
-  unawaited(_hardenAndLoad(controller, html));
-  return WebViewWidget(controller: controller);
+    unawaited(_hardenAndLoad(_controller, widget.html));
+  }
+
+  @override
+  Widget build(BuildContext context) => WebViewWidget(controller: _controller);
 }
 
 Future<void> _hardenAndLoad(WebViewController controller, String html) async {
