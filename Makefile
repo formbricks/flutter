@@ -77,7 +77,10 @@ analyze-ci:
 	$(FLUTTER) analyze --fatal-infos --fatal-warnings
 
 format:
-	$(DART) format .
+	$(DART) format . && make format-docs
+
+format-docs:
+	npx -y prettier --write "**/*.md"
 
 format-check:
 	$(DART) format --output=none --set-exit-if-changed .

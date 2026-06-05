@@ -110,10 +110,10 @@ between the two SDKs finds the same shape.
 
 ### Why these locations
 
-| Path | Holds | Rationale |
-|------|-------|-----------|
-| `packages/formbricks_flutter` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks_flutter.dart` re-exports the public API. |
-| `apps/playground` | Demo app | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. The RN SDK proved this app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
+| Path                          | Holds               | Rationale                                                                                                                                                                                                                                             |
+| ----------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/formbricks_flutter` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks_flutter.dart` re-exports the public API.                                                                                                                                |
+| `apps/playground`             | Demo app            | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. The RN SDK proved this app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
 
 ## Monorepo tooling
 
@@ -244,7 +244,7 @@ Android Studio's Device Manager first.
 
 ### Manual CLI run
 
-A simulator/emulator must be booted *first* — `flutter run` never boots one
+A simulator/emulator must be booted _first_ — `flutter run` never boots one
 itself. Start a device, then target it by id or name substring:
 
 ```bash
@@ -263,13 +263,13 @@ First Android build is slow because Gradle downloads the NDK and CMake
 
 ## Roadmap
 
-| Stage | Scope |
-|-------|-------|
-| Repo + monorepo skeleton | This ✅ |
-| `setup` + command queue | `setup` function, `CommandQueue`, `FormbricksConfig`, `ApiClient` |
-| Track + show survey | `track` + survey rendering (WebView) |
-| CI | GitHub Actions (format / analyze / test / build) |
-| Code quality | SonarCloud wiring + quality gate |
+| Stage                    | Scope                                                             |
+| ------------------------ | ----------------------------------------------------------------- |
+| Repo + monorepo skeleton | This ✅                                                           |
+| `setup` + command queue  | `setup` function, `CommandQueue`, `FormbricksConfig`, `ApiClient` |
+| Track + show survey      | `track` + survey rendering (WebView)                              |
+| CI                       | GitHub Actions (format / analyze / test / build)                  |
+| Code quality             | SonarCloud wiring + quality gate                                  |
 
 The canonical spec and the React-Native→Flutter architecture mapping live in
 [`docs/FLUTTER_SDK_PLAN.md`](docs/FLUTTER_SDK_PLAN.md). The reference RN source is
