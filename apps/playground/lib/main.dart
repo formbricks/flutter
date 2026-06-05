@@ -74,9 +74,32 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     }
   }
 
-  /// Stub for SDK calls. The real `Formbricks.*` API is not wired yet.
-  /// For now each button just confirms the tap so the demo's UX can be
-  /// exercised independently of the SDK.
+  /// Tracks a code action through the SDK and reports the Result.
+  Future<void> _track(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    String message;
+    try {
+      final result = await Formbricks.track('code');
+      message = switch (result) {
+        Ok() => "track('code') → ok (a matching survey will show)",
+        Err(:final error) =>
+          "track('code') → ${error.code.wire}: ${error.message}",
+      };
+    } on FormbricksError catch (e) {
+      // e.g. not_setup when APP_URL / WORKSPACE_ID weren't provided.
+      message = "track('code') → ${e.code.wire}: ${e.message}";
+    }
+    if (!mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+      );
+  }
+
+  /// Stub for the SDK calls whose tickets aren't landed yet (identify /
+  /// attributes / language / logout). Confirms the tap so the demo UX can be
+  /// exercised independently of those features.
   void _stub(BuildContext context, String action) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -119,11 +142,23 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 const SizedBox(height: 24),
                 for (final a in actions) ...[
                   FilledButton(
-                    onPressed: () => _stub(context, a.action),
+                    onPressed: a.action.startsWith('track')
+                        ? () => _track(context)
+                        : () => _stub(context, a.action),
                     child: Text(a.label),
                   ),
                   const SizedBox(height: 12),
                 ],
+                // Host the SDK widget so a triggered survey can render. It is
+                // zero-size while idle and pushes a modal route when a survey is
+                // active. setup() here is idempotent with the imperative call
+                // above.
+                if (_appUrl.isNotEmpty && _workspaceId.isNotEmpty)
+                  const Formbricks(
+                    appUrl: _appUrl,
+                    workspaceId: _workspaceId,
+                    logLevel: LogLevel.debug,
+                  ),
               ],
             ),
           ),

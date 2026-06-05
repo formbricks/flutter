@@ -1,0 +1,126 @@
+/// Typed, sealed model for messages the survey runtime posts back to Dart.
+///
+/// Replaces the React Native SDK's free-form `JSON.parse` + Zod + sequential
+/// `if (onClose) / if (onDisplayCreated) / …` chain (`survey-web-view.tsx`
+/// 171–267) with a hand-rolled validator and a `sealed` event type, so adding a
+/// new event becomes a compile error if a handler doesn't cover it.
+///
+/// A single posted payload may carry several flags, and RN processes each
+/// independently — so the parser returns a **list** of events (in RN's handler
+/// order) rather than collapsing to one.
+library;
+
+import 'dart:convert';
+
+import '../common/logger.dart';
+
+/// Base type for messages bridged from the survey WebView.
+sealed class WebViewEvent {
+  const WebViewEvent();
+}
+
+/// The runtime created a display (the survey was shown).
+final class DisplayCreatedEvent extends WebViewEvent {
+  /// Creates a display-created event.
+  const DisplayCreatedEvent();
+}
+
+/// The runtime recorded a response.
+final class ResponseCreatedEvent extends WebViewEvent {
+  /// Creates a response-created event.
+  const ResponseCreatedEvent();
+}
+
+/// The runtime asked to close the survey.
+final class CloseEvent extends WebViewEvent {
+  /// Creates a close event.
+  const CloseEvent();
+}
+
+/// The runtime asked to open an external URL.
+final class OpenExternalUrlEvent extends WebViewEvent {
+  /// Creates an open-external-URL event for [url].
+  const OpenExternalUrlEvent(this.url);
+
+  /// The URL to open externally.
+  final String url;
+}
+
+/// A `console.*` line forwarded from the WebView (dev-only logging).
+final class ConsoleEvent extends WebViewEvent {
+  /// Creates a console event carrying [log].
+  const ConsoleEvent(this.log);
+
+  /// The serialized console payload.
+  final String log;
+}
+
+/// Parses one JS→Dart payload into zero or more [WebViewEvent]s.
+///
+/// - Malformed input (not JSON / not an object / a flag with a non-bool value /
+///   a non-object `onOpenExternalURLParams` / an external-URL event missing a
+///   string `url`) is **logged and dropped** (returns `const []`), never thrown.
+/// - A `Console` payload maps to a single [ConsoleEvent] (mutually exclusive,
+///   like RN which returns early after console).
+/// - Otherwise one event is emitted per truthy flag, in RN's handler order
+///   (display → response → open-external-url → close). A well-formed but
+///   non-actionable payload (e.g. `{onFinished:true}`) yields `const []`
+///   quietly.
+List<WebViewEvent> parseWebViewEvents(String raw) {
+  Object? decoded;
+  try {
+    decoded = jsonDecode(raw);
+  } catch (_) {
+    Logger.error('Error parsing message from WebView.');
+    return const [];
+  }
+  if (decoded is! Map) {
+    Logger.error('Error parsing message from WebView.');
+    return const [];
+  }
+  final map = decoded.cast<String, dynamic>();
+
+  // Dev-only console bridge (mutually exclusive with lifecycle events).
+  if (map['type'] == 'Console') {
+    final data = map['data'];
+    return [ConsoleEvent(data is Map ? jsonEncode(data) : '${data ?? ''}')];
+  }
+
+  // Validate the known-event shape: each flag must be bool | null | absent.
+  const boolFlags = [
+    'onClose',
+    'onDisplayCreated',
+    'onResponseCreated',
+    'onOpenExternalURL',
+    'onFinished',
+    'onFilePick',
+  ];
+  for (final key in boolFlags) {
+    final value = map[key];
+    if (value != null && value is! bool) {
+      Logger.error('Error parsing message from WebView.');
+      return const [];
+    }
+  }
+  final params = map['onOpenExternalURLParams'];
+  if (params != null && params is! Map) {
+    Logger.error('Error parsing message from WebView.');
+    return const [];
+  }
+
+  final events = <WebViewEvent>[];
+  if (map['onDisplayCreated'] == true) events.add(const DisplayCreatedEvent());
+  if (map['onResponseCreated'] == true) {
+    events.add(const ResponseCreatedEvent());
+  }
+  if (map['onOpenExternalURL'] == true) {
+    final url = (params as Map?)?['url'];
+    if (url is! String) {
+      Logger.error('Error parsing message from WebView.');
+      return const [];
+    }
+    events.add(OpenExternalUrlEvent(url));
+  }
+  if (map['onClose'] == true) events.add(const CloseEvent());
+  return events;
+}

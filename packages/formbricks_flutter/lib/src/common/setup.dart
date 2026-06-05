@@ -48,9 +48,14 @@ Future<Result<void, FormbricksError>> setup({
   required String workspaceId,
   http.Client? httpClient,
   LogLevel? logLevel,
-  @visibleForTesting bool startTicker = true,
+  bool startTicker = true,
 }) async {
-  if (logLevel != null) Logger.configure(level: logLevel);
+  // Configure the logger from build mode here (not deep inside the WebView
+  // widget) so behavior is deterministic: an explicit logLevel wins, otherwise
+  // debug in debug builds and error in release (pitfall #3).
+  Logger.configure(
+    level: logLevel ?? (kDebugMode ? LogLevel.debug : LogLevel.error),
+  );
 
   if (_isSetup) {
     Logger.debug('Already set up, skipping setup.');

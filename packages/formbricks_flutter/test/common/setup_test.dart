@@ -400,4 +400,30 @@ void main() {
 
     expect(_errOf(result), isA<NetworkError>());
   });
+
+  test('configures the logger to debug from build mode when no level given',
+      () async {
+    final mock = MockClient((_) async => http.Response(_envBody(), 200));
+    await setup(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+    );
+    // `flutter test` runs in debug mode (kDebugMode == true) → debug level.
+    expect(Logger.level, LogLevel.debug);
+  });
+
+  test('an explicit logLevel takes precedence over the build-mode default',
+      () async {
+    final mock = MockClient((_) async => http.Response(_envBody(), 200));
+    await setup(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+      logLevel: LogLevel.error,
+    );
+    expect(Logger.level, LogLevel.error);
+  });
 }

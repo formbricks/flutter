@@ -27,8 +27,14 @@ dependencies:
   http: ^1.2.0
   shared_preferences: ^2.3.0
   clock: ^1.1.2
-  # Survey-rendering deps (webview_flutter, url_launcher, connectivity_plus)
-  # are added when track + WebView land.
+  # Survey-rendering deps (added by ENG-1127: track + WebView).
+  webview_flutter: ^4.13.0
+  # Direct dep so we can reach AndroidWebViewController for security hardening
+  # (setAllowFileAccess/setAllowContentAccess) — the documented way to configure
+  # platform-specific WebView settings.
+  webview_flutter_android: ^4.13.0
+  url_launcher: ^6.3.0
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:

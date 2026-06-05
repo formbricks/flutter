@@ -92,6 +92,31 @@ class TUserData {
   /// The active language code, or null.
   final String? language;
 
+  /// Returns a copy with the given fields overridden.
+  ///
+  /// Sufficient for the survey-event handlers, which only *set* values
+  /// (appending displays/responses, stamping `lastDisplayAt`); clearing a field
+  /// back to null is not needed here, so the standard `?? this.x` fallback is
+  /// safe.
+  TUserData copyWith({
+    String? userId,
+    String? contactId,
+    List<String>? segments,
+    List<TDisplay>? displays,
+    List<String>? responses,
+    DateTime? lastDisplayAt,
+    String? language,
+  }) =>
+      TUserData(
+        userId: userId ?? this.userId,
+        contactId: contactId ?? this.contactId,
+        segments: segments ?? this.segments,
+        displays: displays ?? this.displays,
+        responses: responses ?? this.responses,
+        lastDisplayAt: lastDisplayAt ?? this.lastDisplayAt,
+        language: language ?? this.language,
+      );
+
   /// Encodes this user data to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
         'userId': userId,

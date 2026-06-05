@@ -30,6 +30,11 @@ class Logger {
     if (level != null) _instance._level = level;
   }
 
+  /// The current log level. Exposed for tests (e.g. to assert `setup()`
+  /// configured it from the build mode).
+  @visibleForTesting
+  static LogLevel get level => _instance._level;
+
   /// Logs a debug message (suppressed unless level is [LogLevel.debug]).
   static void debug(String message) => _instance._log(message, LogLevel.debug);
 
