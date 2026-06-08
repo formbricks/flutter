@@ -12,6 +12,33 @@ void main() {
         isTrue,
       );
     });
+    test('explicit default https port → true', () {
+      expect(
+        isAllowedWebViewNavigation(
+          'https://app.formbricks.com:443/x',
+          appUrl,
+        ),
+        isTrue,
+      );
+    });
+    test('explicit default http port → true', () {
+      expect(
+        isAllowedWebViewNavigation(
+          'http://localhost:80/x',
+          'http://localhost',
+        ),
+        isTrue,
+      );
+    });
+    test('non-default port → false', () {
+      expect(
+        isAllowedWebViewNavigation(
+          'https://app.formbricks.com:8443/x',
+          appUrl,
+        ),
+        isFalse,
+      );
+    });
     test('about:blank → true', () {
       expect(isAllowedWebViewNavigation('about:blank', appUrl), isTrue);
     });

@@ -76,7 +76,7 @@ Future<Result<void, FormbricksError>> track(
         NetworkError(
           message: 'No internet connection. Please check your connection and '
               'try again.',
-          status: 500,
+          status: 0,
           url: Uri.tryParse('${cfg.appUrl}/js/surveys.umd.cjs'),
           responseMessage:
               'No internet connection. Please check your connection and try '
@@ -106,10 +106,13 @@ Future<Result<void, FormbricksError>> track(
     }
 
     return trackAction(match.name, alias: code, config: fc, store: store);
-  } catch (e) {
-    Logger.error('Error tracking action $e');
+  } on FormbricksError catch (e, stackTrace) {
+    Logger.error('Error tracking action: $e\n$stackTrace');
+    return Result.err(e);
+  } catch (e, stackTrace) {
+    Logger.error('Error tracking action: $e\n$stackTrace');
     return Result.err(
-      NetworkError(message: 'Error tracking action', status: 500),
+      InternalError(operation: 'track', cause: e, stackTrace: stackTrace),
     );
   }
 }

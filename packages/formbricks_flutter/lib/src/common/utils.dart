@@ -26,7 +26,8 @@ String? getLanguageCode(TSurvey survey, [String? language]) {
 
   TSurveyLanguage? selected;
   for (final l in survey.languages) {
-    if (l.language.code == lower || l.language.alias?.toLowerCase() == lower) {
+    if (l.language.code.toLowerCase() == lower ||
+        l.language.alias?.toLowerCase() == lower) {
       selected = l;
       break;
     }

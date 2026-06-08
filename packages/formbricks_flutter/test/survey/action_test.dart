@@ -91,7 +91,7 @@ void main() {
           await track('k', config: config, isConnected: () async => false);
       final error = _errOf(result) as NetworkError;
       expect(error.code, FormbricksErrorCode.networkError);
-      expect(error.status, 500);
+      expect(error.status, 0);
       expect(
         error.url.toString(),
         'https://app.formbricks.com/js/surveys.umd.cjs',
@@ -179,7 +179,7 @@ void main() {
       expect(result.isOk, isTrue);
     });
 
-    test('an unexpected internal error → generic network_error', () async {
+    test('an unexpected internal error → internal_error', () async {
       // An uninitialized config makes `get()` throw, exercising the outer catch.
       FormbricksConfig.resetInstance();
       final result = await track(
@@ -187,8 +187,10 @@ void main() {
         config: FormbricksConfig.instance,
         isConnected: () async => true,
       );
-      final error = _errOf(result) as NetworkError;
-      expect(error.message, 'Error tracking action');
+      final error = _errOf(result) as InternalError;
+      expect(error.code, FormbricksErrorCode.internalError);
+      expect(error.operation, 'track');
+      expect(error.cause, isA<StateError>());
     });
   });
 

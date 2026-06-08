@@ -123,15 +123,24 @@ class _FormbricksState extends State<Formbricks> {
 
   Future<void> _setup() async {
     try {
-      await Formbricks.setup(
+      final result = await Formbricks.setup(
         appUrl: widget.appUrl,
         workspaceId: widget.workspaceId,
         logLevel: widget.logLevel,
         httpClient: widget.httpClient,
         startTicker: widget.startTicker,
       );
-    } catch (_) {
-      Logger.debug('Initialization failed');
+      if (result case Err(:final error)) {
+        Logger.error(
+          'Initialization failed: ${error.code.wire}: ${error.message}',
+        );
+      }
+    } on FormbricksError catch (error) {
+      Logger.error(
+        'Initialization failed: ${error.code.wire}: ${error.message}',
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Initialization failed: $e\n$stackTrace');
     }
   }
 

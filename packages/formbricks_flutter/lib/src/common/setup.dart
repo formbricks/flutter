@@ -58,20 +58,6 @@ Future<Result<void, FormbricksError>> setup({
     return const Result.ok(null);
   }
 
-  final config = FormbricksConfig.instance;
-  await config.init();
-  final existing = config.getOrNull();
-
-  // Retry only after the stored first-setup cooldown expires.
-  if (existing != null && existing.status.isError) {
-    final expiresAt = existing.status.expiresAt;
-    if (expiresAt != null && !isNowExpired(expiresAt)) {
-      Logger.debug('Within error cooldown. Skipping setup.');
-      return Result.err(SetupCooldownError(retryAt: expiresAt));
-    }
-    Logger.debug('Error cooldown elapsed. Continuing with setup.');
-  }
-
   if (workspaceId.isEmpty) {
     Logger.debug('No workspaceId provided');
     return Result.err(MissingFieldError('workspaceId'));
@@ -96,6 +82,26 @@ Future<Result<void, FormbricksError>> setup({
   // Strip any trailing slash so endpoints (which all start with `/api/...`)
   // don't produce a double-slash URL the backend won't route.
   final normalizedAppUrl = appUrl.replaceAll(RegExp(r'/+$'), '');
+
+  final config = FormbricksConfig.instance;
+  await config.init();
+  final existing = config.getOrNull();
+
+  // Retry only after the stored first-setup cooldown expires for this target.
+  if (existing != null && existing.status.isError) {
+    final expiresAt = existing.status.expiresAt;
+    final sameTarget = existing.workspaceId == workspaceId &&
+        existing.appUrl == normalizedAppUrl;
+    if (sameTarget && expiresAt != null && !isNowExpired(expiresAt)) {
+      Logger.debug('Within error cooldown. Skipping setup.');
+      return Result.err(SetupCooldownError(retryAt: expiresAt));
+    }
+    Logger.debug(
+      sameTarget
+          ? 'Error cooldown elapsed. Continuing with setup.'
+          : 'Ignoring error cooldown for different setup target.',
+    );
+  }
 
   Logger.debug('Start setup');
 
@@ -134,7 +140,12 @@ Future<Result<void, FormbricksError>> setup({
             ),
           );
         case Err(:final error):
-          await _handleErrorOnFirstSetup(config, error);
+          await _handleErrorOnFirstSetup(
+            config,
+            error,
+            appUrl: normalizedAppUrl,
+            workspaceId: workspaceId,
+          );
       }
     }
 
@@ -200,8 +211,10 @@ Future<Result<void, FormbricksError>> _syncExistingConfig(
 /// RN's `handleErrorOnFirstSetup`.
 Future<Never> _handleErrorOnFirstSetup(
   FormbricksConfig config,
-  ApiErrorResponse error,
-) async {
+  ApiErrorResponse error, {
+  required String appUrl,
+  required String workspaceId,
+}) async {
   final isForbidden = error.code == 'forbidden';
   if (isForbidden) {
     Logger.error('Authorization error: ${error.message}');
@@ -214,6 +227,8 @@ Future<Never> _handleErrorOnFirstSetup(
 
   await config.update(
     TConfig(
+      workspaceId: workspaceId,
+      appUrl: appUrl,
       status: TStatus(
         value: 'error',
         expiresAt: clock.now().add(_kErrorCooldown),

@@ -77,10 +77,7 @@ void main() {
         ),
       ),
     );
-    await tester.runAsync(
-      () async => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byType(SurveyWebView), findsNothing);
     await tester.tap(find.text('behind'));
@@ -102,10 +99,7 @@ void main() {
         ),
       ),
     );
-    await tester.runAsync(
-      () async => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     SurveyStore.instance.setSurvey(
       TSurvey.fromJson({'id': 's1', 'languages': <dynamic>[]}),
@@ -138,10 +132,7 @@ void main() {
         ),
       ),
     );
-    await tester.runAsync(
-      () async => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(envFetches, 1);
 
     // Force host rebuilds via store changes; initState must not re-run.

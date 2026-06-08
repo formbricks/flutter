@@ -17,7 +17,10 @@ enum FormbricksErrorCode {
   setupCooldown('setup_cooldown'),
 
   /// An invalid code was supplied (reserved for code actions).
-  invalidCode('invalid_code');
+  invalidCode('invalid_code'),
+
+  /// An internal SDK failure that is not a network/backend error.
+  internalError('internal_error');
 
   const FormbricksErrorCode(this.wire);
 
@@ -63,6 +66,8 @@ final class NotSetupError extends FormbricksError {
 /// A network failure or non-2xx response while talking to the backend.
 final class NetworkError extends FormbricksError {
   /// Creates a network error with the HTTP [status] and optional [url].
+  ///
+  /// A [status] of `0` represents a local/offline non-HTTP failure.
   NetworkError({
     required String message,
     required this.status,
@@ -70,7 +75,7 @@ final class NetworkError extends FormbricksError {
     this.responseMessage,
   }) : super(FormbricksErrorCode.networkError, message);
 
-  /// The HTTP status code (or 500 when unknown).
+  /// The HTTP status code, or `0` for local/offline non-HTTP failures.
   final int status;
 
   /// The endpoint that failed, when known.
@@ -85,6 +90,29 @@ final class InvalidCodeError extends FormbricksError {
   /// Creates an invalid-code error.
   InvalidCodeError([String message = 'Invalid code'])
       : super(FormbricksErrorCode.invalidCode, message);
+}
+
+/// An internal SDK failure that is not a network/backend error.
+final class InternalError extends FormbricksError {
+  /// Creates an internal error for [operation], preserving the original [cause].
+  InternalError({
+    required this.operation,
+    required this.cause,
+    this.stackTrace,
+    String? message,
+  }) : super(
+          FormbricksErrorCode.internalError,
+          message ?? 'Internal error while running $operation.',
+        );
+
+  /// The SDK operation that failed.
+  final String operation;
+
+  /// The original exception or error.
+  final Object cause;
+
+  /// The original stack trace, when available.
+  final StackTrace? stackTrace;
 }
 
 /// Thrown when the very first [setup] attempt fails and the SDK is placed into

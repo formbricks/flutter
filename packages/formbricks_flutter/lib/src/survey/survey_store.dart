@@ -22,11 +22,9 @@ class SurveyStore {
   /// The currently-active survey, or null.
   TSurvey? get survey => _notifier.value;
 
-  /// Sets [survey] as active, notifying listeners only when the id changes.
+  /// Sets [survey] as active.
   void setSurvey(TSurvey survey) {
-    if (_notifier.value?.id != survey.id) {
-      _notifier.value = survey;
-    }
+    _notifier.value = survey;
   }
 
   /// Clears the active survey, notifying listeners only when one was set.

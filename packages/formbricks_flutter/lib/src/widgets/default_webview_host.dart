@@ -13,6 +13,7 @@ import 'package:flutter/widgets.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../common/logger.dart';
 import 'webview_event.dart';
 import 'webview_navigation.dart';
 
@@ -84,6 +85,8 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
     //     the survey lifetime.
     //   * No `baseUrl`: the injected document gets an opaque origin and is not
     //     granted the workspace's first-party storage/cookies.
+    // The Formbricks bridge only receives lifecycle JSON parsed by
+    // parseWebViewEvents; navigation and external URL handling stay allowlisted.
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
@@ -125,12 +128,16 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
 }
 
 Future<void> _hardenAndLoad(WebViewController controller, String html) async {
-  final platform = controller.platform;
-  if (platform is AndroidWebViewController) {
-    await platform.setAllowFileAccess(false);
-    await platform.setAllowContentAccess(false);
+  try {
+    final platform = controller.platform;
+    if (platform is AndroidWebViewController) {
+      await platform.setAllowFileAccess(false);
+      await platform.setAllowContentAccess(false);
+    }
+    await controller.clearCache();
+    await controller.clearLocalStorage();
+    await controller.loadHtmlString(html);
+  } catch (e, stackTrace) {
+    Logger.error('Failed to initialize survey WebView: $e\n$stackTrace');
   }
-  await controller.clearCache();
-  await controller.clearLocalStorage();
-  await controller.loadHtmlString(html);
 }

@@ -38,8 +38,20 @@ bool isAllowedWebViewNavigation(String candidateUrl, String appUrl) {
   return _origin(candidate) == _origin(allowed);
 }
 
-String _origin(Uri uri) =>
-    '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+int? _nonDefaultPort(Uri uri) {
+  if (!uri.hasPort) return null;
+  final port = uri.port;
+  if ((uri.scheme == 'http' && port == 80) ||
+      (uri.scheme == 'https' && port == 443)) {
+    return null;
+  }
+  return port;
+}
+
+String _origin(Uri uri) {
+  final port = _nonDefaultPort(uri);
+  return '${uri.scheme}://${uri.host}${port == null ? '' : ':$port'}';
+}
 
 /// Decides what to do with a navigation request.
 ///

@@ -9,6 +9,7 @@ void main() {
     expect(FormbricksErrorCode.forbidden.wire, 'forbidden');
     expect(FormbricksErrorCode.setupCooldown.wire, 'setup_cooldown');
     expect(FormbricksErrorCode.invalidCode.wire, 'invalid_code');
+    expect(FormbricksErrorCode.internalError.wire, 'internal_error');
   });
 
   test('SetupCooldownError carries the code and retryAt', () {
@@ -49,6 +50,15 @@ void main() {
 
   test('InvalidCodeError uses the invalid_code code', () {
     expect(InvalidCodeError().code, FormbricksErrorCode.invalidCode);
+  });
+
+  test('InternalError preserves operation and cause', () {
+    final cause = StateError('boom');
+    final error = InternalError(operation: 'track', cause: cause);
+    expect(error.code, FormbricksErrorCode.internalError);
+    expect(error.operation, 'track');
+    expect(error.cause, same(cause));
+    expect(error.message, contains('track'));
   });
 
   test(

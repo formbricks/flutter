@@ -57,8 +57,7 @@ void main() {
     await tester.pumpWidget(const PlaygroundApp());
 
     await tester.tap(find.text('Trigger Code Action'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle();
 
     expect(find.textContaining('not wired to the SDK yet'), findsNothing);
     expect(find.textContaining("track('code')"), findsWidgets);

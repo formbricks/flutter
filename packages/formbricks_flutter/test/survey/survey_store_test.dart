@@ -2,7 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks_flutter/src/survey/survey_store.dart';
 import 'package:formbricks_flutter/src/types/survey.dart';
 
-TSurvey _s(String id) => TSurvey.fromJson({'id': id});
+TSurvey _s(String id, {String? headline}) => TSurvey.fromJson({
+      'id': id,
+      if (headline != null) 'headline': headline,
+    });
 
 void main() {
   setUp(SurveyStore.resetInstance);
@@ -19,12 +22,13 @@ void main() {
     expect(notifications, 1);
   });
 
-  test('setSurvey with the same id does not notify', () {
-    SurveyStore.instance.setSurvey(_s('a'));
+  test('setSurvey with the same id refreshes payload and notifies', () {
+    SurveyStore.instance.setSurvey(_s('a', headline: 'old'));
     var notifications = 0;
     SurveyStore.instance.listenable.addListener(() => notifications++);
-    SurveyStore.instance.setSurvey(_s('a'));
-    expect(notifications, 0);
+    SurveyStore.instance.setSurvey(_s('a', headline: 'new'));
+    expect(SurveyStore.instance.survey?.toJson()['headline'], 'new');
+    expect(notifications, 1);
   });
 
   test('setSurvey with a different id replaces and notifies', () {

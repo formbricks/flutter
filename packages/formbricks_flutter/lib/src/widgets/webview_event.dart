@@ -8,6 +8,9 @@ import 'dart:convert';
 
 import '../common/logger.dart';
 
+const String _parseErrorMessage = 'Error parsing message from WebView.';
+const String _consoleType = 'Console';
+
 /// Base type for messages bridged from the survey WebView.
 sealed class WebViewEvent {
   const WebViewEvent();
@@ -61,26 +64,49 @@ final class ConsoleEvent extends WebViewEvent {
 ///   non-actionable payload (e.g. `{onFinished:true}`) yields `const []`
 ///   quietly.
 List<WebViewEvent> parseWebViewEvents(String raw) {
+  final map = _decodeMessage(raw);
+  if (map == null) return const [];
+
+  // Dev-only console bridge (mutually exclusive with lifecycle events).
+  final consoleEvent = _consoleEvent(map);
+  if (consoleEvent != null) return [consoleEvent];
+
+  if (!_hasValidShape(map)) return const [];
+
+  final events = <WebViewEvent>[];
+  if (map['onDisplayCreated'] == true) events.add(const DisplayCreatedEvent());
+  if (map['onResponseCreated'] == true) {
+    events.add(const ResponseCreatedEvent());
+  }
+  if (map['onOpenExternalURL'] == true) {
+    events.add(OpenExternalUrlEvent(_externalUrl(map)!));
+  }
+  if (map['onClose'] == true) events.add(const CloseEvent());
+  return events;
+}
+
+Map<String, dynamic>? _decodeMessage(String raw) {
   Object? decoded;
   try {
     decoded = jsonDecode(raw);
   } catch (_) {
-    Logger.error('Error parsing message from WebView.');
-    return const [];
+    _logParseError();
+    return null;
   }
   if (decoded is! Map) {
-    Logger.error('Error parsing message from WebView.');
-    return const [];
+    _logParseError();
+    return null;
   }
-  final map = decoded.cast<String, dynamic>();
+  return decoded.cast<String, dynamic>();
+}
 
-  // Dev-only console bridge (mutually exclusive with lifecycle events).
-  if (map['type'] == 'Console') {
-    final data = map['data'];
-    return [ConsoleEvent(data is Map ? jsonEncode(data) : '${data ?? ''}')];
-  }
+ConsoleEvent? _consoleEvent(Map<String, dynamic> map) {
+  if (map['type'] != _consoleType) return null;
+  final data = map['data'];
+  return ConsoleEvent(data is Map ? jsonEncode(data) : '${data ?? ''}');
+}
 
-  // Validate the known-event shape: each flag must be bool | null | absent.
+bool _hasValidShape(Map<String, dynamic> map) {
   const boolFlags = [
     'onClose',
     'onDisplayCreated',
@@ -92,29 +118,26 @@ List<WebViewEvent> parseWebViewEvents(String raw) {
   for (final key in boolFlags) {
     final value = map[key];
     if (value != null && value is! bool) {
-      Logger.error('Error parsing message from WebView.');
-      return const [];
+      _logParseError();
+      return false;
     }
   }
   final params = map['onOpenExternalURLParams'];
   if (params != null && params is! Map) {
-    Logger.error('Error parsing message from WebView.');
-    return const [];
+    _logParseError();
+    return false;
   }
-
-  final events = <WebViewEvent>[];
-  if (map['onDisplayCreated'] == true) events.add(const DisplayCreatedEvent());
-  if (map['onResponseCreated'] == true) {
-    events.add(const ResponseCreatedEvent());
+  if (map['onOpenExternalURL'] == true && _externalUrl(map) == null) {
+    _logParseError();
+    return false;
   }
-  if (map['onOpenExternalURL'] == true) {
-    final url = (params as Map?)?['url'];
-    if (url is! String) {
-      Logger.error('Error parsing message from WebView.');
-      return const [];
-    }
-    events.add(OpenExternalUrlEvent(url));
-  }
-  if (map['onClose'] == true) events.add(const CloseEvent());
-  return events;
+  return true;
 }
+
+String? _externalUrl(Map<String, dynamic> map) {
+  final params = map['onOpenExternalURLParams'];
+  final url = params is Map ? params['url'] : null;
+  return url is String ? url : null;
+}
+
+void _logParseError() => Logger.error(_parseErrorMessage);

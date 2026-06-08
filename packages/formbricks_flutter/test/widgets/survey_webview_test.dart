@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -67,6 +68,20 @@ Future<Map<String, dynamic>> _storedUserData() async {
   final raw = prefs.getString(FormbricksConfig.storageKey)!;
   final stored = jsonDecode(raw) as Map<String, dynamic>;
   return (stored['user'] as Map)['data'] as Map<String, dynamic>;
+}
+
+Future<void> _waitUntil(
+  Future<bool> Function() done, {
+  Duration timeout = const Duration(seconds: 2),
+  Duration step = const Duration(milliseconds: 10),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!await done()) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('Timed out waiting for async side effect');
+    }
+    await Future<void>.delayed(step);
+  }
 }
 
 Future<_StubHost> _present(
@@ -198,7 +213,13 @@ void main() {
     Map<String, dynamic>? storedData;
     await tester.runAsync(() async {
       host.onEvent!(const DisplayCreatedEvent());
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        final displays = data['displays'] as List?;
+        return displays != null &&
+            displays.isNotEmpty &&
+            data['lastDisplayAt'] != null;
+      });
       storedData = await _storedUserData();
     });
 
@@ -223,7 +244,13 @@ void main() {
     Map<String, dynamic>? storedData;
     await tester.runAsync(() async {
       host.onEvent!(const ResponseCreatedEvent());
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        final responses = data['responses'] as List?;
+        return responses != null &&
+            responses.length == 1 &&
+            responses.single == 's1';
+      });
       storedData = await _storedUserData();
     });
 
@@ -251,7 +278,7 @@ void main() {
 
     await tester.runAsync(() async {
       host.onEvent!(const OpenExternalUrlEvent('https://x.com'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(() async => launched.isNotEmpty);
     });
 
     expect(launched.map((u) => u.toString()).toList(), ['https://x.com']);
@@ -267,7 +294,13 @@ void main() {
     await tester.runAsync(() async {
       host.onEvent!(const ResponseCreatedEvent());
       host.onEvent!(const CloseEvent());
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        final responses = data['responses'] as List?;
+        return responses != null &&
+            responses.length == 1 &&
+            responses.single == 's1';
+      });
       storedData = await _storedUserData();
     });
     await tester.pump();

@@ -47,6 +47,26 @@ void main() {
     test('case-insensitive match', () {
       expect(getLanguageCode(_survey(langs), 'DE'), 'de');
     });
+    test('case-insensitive payload code match', () {
+      expect(
+        getLanguageCode(
+          _survey([
+            {
+              'default': true,
+              'enabled': true,
+              'language': {'code': 'EN'},
+            },
+            {
+              'default': false,
+              'enabled': true,
+              'language': {'code': 'DE'},
+            },
+          ]),
+          'de',
+        ),
+        'DE',
+      );
+    });
     test('disabled language → null', () {
       expect(getLanguageCode(_survey(langs), 'fr'), isNull);
     });

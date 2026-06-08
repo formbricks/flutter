@@ -5,6 +5,7 @@ const String _defaultAppUrl = String.fromEnvironment('APP_URL');
 const String _defaultWorkspaceId = String.fromEnvironment('WORKSPACE_ID');
 
 const String kWelcomeMessage = 'Welcome to Formbricks';
+const String _statusConnected = 'connected ✓';
 
 void main() {
   runApp(const PlaygroundApp());
@@ -106,7 +107,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
             _connected = true;
             _connectedAppUrl = appUrl;
             _connectedWorkspaceId = workspaceId;
-            _status = 'connected ✓';
+            _status = _statusConnected;
           case Err(:final error):
             _status = 'setup error: ${error.code.wire}: ${error.message}';
         }
@@ -212,7 +213,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   textAlign: TextAlign.center,
                   style: textTheme.bodySmall,
                 ),
-                if (_connected && _status != 'connected') ...[
+                if (_connected && _status != _statusConnected) ...[
                   const SizedBox(height: 4),
                   Text(
                     _status,
