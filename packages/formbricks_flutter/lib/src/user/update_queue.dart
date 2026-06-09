@@ -164,8 +164,14 @@ class UpdateQueue {
       throw MissingFieldError('userId', message: message);
     }
 
-    await _sendUpdates(effectiveUserId, attributes);
-    _updates = null;
+    // Clear the buffer regardless of how _sendUpdates resolves — a failed batch
+    // is dropped (no retry), so even an unexpected throw must not leave it
+    // buffered for the next change to re-send.
+    try {
+      await _sendUpdates(effectiveUserId, attributes);
+    } finally {
+      _updates = null;
+    }
   }
 
   /// Writes a queued `language` straight into local config (no API call) and

@@ -14,8 +14,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _appUrl = 'https://app.formbricks.com';
 const _workspaceId = 'wsp_1';
 
-String _configJson({String? userId, String? language}) => jsonEncode({
-      'workspaceId': _workspaceId,
+String _configJson({
+  String? userId,
+  String? language,
+  bool omitWorkspaceId = false,
+}) =>
+    jsonEncode({
+      'workspaceId': omitWorkspaceId ? null : _workspaceId,
       'appUrl': _appUrl,
       'workspace': {
         'expiresAt': '2100-01-01T00:00:00.000',
@@ -35,10 +40,17 @@ String _configJson({String? userId, String? language}) => jsonEncode({
       'status': {'value': 'success', 'expiresAt': null},
     });
 
-Future<FormbricksConfig> _seed({String? userId, String? language}) async {
+Future<FormbricksConfig> _seed({
+  String? userId,
+  String? language,
+  bool omitWorkspaceId = false,
+}) async {
   SharedPreferences.setMockInitialValues({
-    FormbricksConfig.storageKey:
-        _configJson(userId: userId, language: language),
+    FormbricksConfig.storageKey: _configJson(
+      userId: userId,
+      language: language,
+      omitWorkspaceId: omitWorkspaceId,
+    ),
   });
   FormbricksConfig.resetInstance();
   final config = FormbricksConfig.instance;
@@ -279,6 +291,24 @@ void main() {
       expect(calls, 1, reason: 'no retry');
       expect(queue.isEmpty, isTrue);
       expect(config.get().user.data.contactId, before, reason: 'state intact');
+    });
+  });
+
+  test('buffer is cleared even when _sendUpdates throws (no retry)', () async {
+    // A null workspaceId makes _sendUpdates throw on `cfg.workspaceId!` before
+    // any network call — the finally must still drop the batch.
+    final config = await _seed(userId: 'u1', omitWorkspaceId: true);
+    final queue = UpdateQueue.instance..configOverride = config;
+
+    fakeAsync((async) {
+      Object? caught;
+      queue
+        ..updateAttributes({'plan': 'pro'})
+        ..processUpdates().catchError((Object e) => caught = e);
+      async.elapse(const Duration(milliseconds: 500));
+
+      expect(caught, isNotNull, reason: 'the throw propagates to the caller');
+      expect(queue.isEmpty, isTrue, reason: 'batch dropped, not retained');
     });
   });
 
