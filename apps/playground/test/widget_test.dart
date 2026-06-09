@@ -38,17 +38,34 @@ void main() {
     );
   });
 
-  testWidgets('tapping a not-yet-wired button shows the stub snackbar', (
+  testWidgets('identity buttons are disabled until connected', (tester) async {
+    await tester.pumpWidget(const PlaygroundApp());
+
+    final logoutButton = tester.widget<FilledButton>(
+      find.ancestor(
+        of: find.text('Logout'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    // Not connected (no --dart-define credentials) → command would throw
+    // NotSetupError, so the button is gated off.
+    expect(logoutButton.onPressed, isNull);
+  });
+
+  testWidgets('local storage buttons render and are always enabled', (
     tester,
   ) async {
     await tester.pumpWidget(const PlaygroundApp());
 
-    await tester.ensureVisible(find.text('Logout'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Logout'));
-    await tester.pump();
-
-    expect(find.textContaining('not wired to the SDK yet'), findsOneWidget);
+    for (final label in ['Log Local Storage', 'Clear Local Storage']) {
+      final button = tester.widget<OutlinedButton>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(OutlinedButton),
+        ),
+      );
+      expect(button.onPressed, isNotNull);
+    }
   });
 
   testWidgets('tapping Trigger Code Action calls the wired SDK track', (

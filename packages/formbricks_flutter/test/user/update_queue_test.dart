@@ -37,7 +37,8 @@ String _configJson({String? userId, String? language}) => jsonEncode({
 
 Future<FormbricksConfig> _seed({String? userId, String? language}) async {
   SharedPreferences.setMockInitialValues({
-    FormbricksConfig.storageKey: _configJson(userId: userId, language: language),
+    FormbricksConfig.storageKey:
+        _configJson(userId: userId, language: language),
   });
   FormbricksConfig.resetInstance();
   final config = FormbricksConfig.instance;
@@ -223,7 +224,8 @@ void main() {
     });
   });
 
-  test('attributes without a userId → MissingFieldError, buffer cleared, no API',
+  test(
+      'attributes without a userId → MissingFieldError, buffer cleared, no API',
       () async {
     final config = await _seed();
     var calls = 0;

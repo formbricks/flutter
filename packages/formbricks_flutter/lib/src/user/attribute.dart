@@ -24,7 +24,8 @@ Future<Result<void, FormbricksError>> setAttributes(
 }) async {
   final normalized = <String, Object?>{};
   attributes.forEach((key, value) {
-    normalized[key] = value is DateTime ? value.toUtc().toIso8601String() : value;
+    normalized[key] =
+        value is DateTime ? value.toUtc().toIso8601String() : value;
   });
 
   final q = queue ?? UpdateQueue.instance;

@@ -98,8 +98,7 @@ void main() {
       expect(config.get().user.data.segments, isEmpty);
 
       // Persisted to disk: a fresh load sees the reset.
-      final raw =
-          (await SharedPreferences.getInstance()).getString(
+      final raw = (await SharedPreferences.getInstance()).getString(
         FormbricksConfig.storageKey,
       );
       final decoded = jsonDecode(raw!) as Map<String, dynamic>;

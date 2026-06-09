@@ -198,45 +198,45 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     if (!mounted) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('local storage cleared')),
-      );
+      ..showSnackBar(const SnackBar(content: Text('local storage cleared')));
   }
 
   @override
   Widget build(BuildContext context) {
     final identityActions =
-        <({String label, String action, Future<Result<void, FormbricksError>> Function() op})>[
-      (
-        label: 'Set userId',
-        action: "setUserId('playground-user')",
-        op: () => Formbricks.setUserId('playground-user'),
-      ),
-      (
-        label: 'Set User Attributes (multiple)',
-        action: 'setAttributes({plan, mrr, signup_date})',
-        op: () => Formbricks.setAttributes({
-          'plan': 'pro',
-          'mrr': 99,
-          'signup_date': DateTime.now(),
-        }),
-      ),
-      (
-        label: 'Set User Attribute (single)',
-        action: "setAttribute('source', 'playground')",
-        op: () => Formbricks.setAttribute('source', 'playground'),
-      ),
-      (
-        label: 'Set Language (de)',
-        action: "setLanguage('de')",
-        op: () => Formbricks.setLanguage('de'),
-      ),
-      (
-        label: 'Logout',
-        action: 'logout()',
-        op: Formbricks.logout,
-      ),
-    ];
+        <
+          ({
+            String label,
+            String action,
+            Future<Result<void, FormbricksError>> Function() op,
+          })
+        >[
+          (
+            label: 'Set userId',
+            action: "setUserId('playground-user')",
+            op: () => Formbricks.setUserId('playground-user'),
+          ),
+          (
+            label: 'Set User Attributes (multiple)',
+            action: 'setAttributes({plan, mrr, signup_date})',
+            op: () => Formbricks.setAttributes({
+              'plan': 'pro',
+              'mrr': 99,
+              'signup_date': DateTime.now(),
+            }),
+          ),
+          (
+            label: 'Set User Attribute (single)',
+            action: "setAttribute('source', 'playground')",
+            op: () => Formbricks.setAttribute('source', 'playground'),
+          ),
+          (
+            label: 'Set Language (de)',
+            action: "setLanguage('de')",
+            op: () => Formbricks.setLanguage('de'),
+          ),
+          (label: 'Logout', action: 'logout()', op: Formbricks.logout),
+        ];
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(

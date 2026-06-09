@@ -143,9 +143,8 @@ class UpdateQueue {
 
     // Resolve the effective userId: pending (non-empty) first, then config.
     final pendingUserId = pending.userId;
-    final effectiveUserId = (pendingUserId.isNotEmpty)
-        ? pendingUserId
-        : cfg.user.data.userId;
+    final effectiveUserId =
+        (pendingUserId.isNotEmpty) ? pendingUserId : cfg.user.data.userId;
 
     var attributes = <String, Object?>{...?pending.attributes};
 
@@ -221,8 +220,7 @@ class UpdateQueue {
       case Ok(:final value):
         // errors => always-visible; messages => debug-only.
         value.errors?.forEach(Logger.error);
-        value.messages
-            ?.forEach((m) => Logger.debug('User update message: $m'));
+        value.messages?.forEach((m) => Logger.debug('User update message: $m'));
         final hasWarnings = value.errors?.isNotEmpty ?? false;
 
         await _config.update(_config.get().copyWith(user: value.state));
