@@ -133,6 +133,8 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       };
     } on FormbricksError catch (e) {
       message = "track('$code') -> ${e.code.wire}: ${e.message}";
+    } catch (e) {
+      message = "track('$code') -> unexpected error: $e";
     }
     if (!mounted) return;
     setState(() => _lastTrack = message);
@@ -163,6 +165,8 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       };
     } on FormbricksError catch (e) {
       message = '$action -> ${e.code.wire}: ${e.message}';
+    } catch (e) {
+      message = '$action -> unexpected error: $e';
     }
     if (!mounted) return;
     messenger
@@ -175,30 +179,36 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
   /// Reads the persisted config and dumps it to the console.
   Future<void> _logStorage(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final raw = await Formbricks.debugStoredConfig();
-    debugPrint('Formbricks local storage: ${raw ?? '<empty>'}');
+    String message;
+    try {
+      final raw = await Formbricks.debugStoredConfig();
+      debugPrint('Formbricks local storage: ${raw ?? '<empty>'}');
+      message = raw == null
+          ? 'local storage is empty'
+          : 'local storage logged to console (${raw.length} chars)';
+    } catch (e) {
+      message = 'log local storage -> unexpected error: $e';
+    }
     if (!mounted) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            raw == null
-                ? 'local storage is empty'
-                : 'local storage logged to console (${raw.length} chars)',
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Clears the persisted config + in-memory copy.
   Future<void> _clearStorage(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    await Formbricks.debugClearStoredConfig();
+    String message;
+    try {
+      await Formbricks.debugClearStoredConfig();
+      message = 'local storage cleared';
+    } catch (e) {
+      message = 'clear local storage -> unexpected error: $e';
+    }
     if (!mounted) return;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('local storage cleared')));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
