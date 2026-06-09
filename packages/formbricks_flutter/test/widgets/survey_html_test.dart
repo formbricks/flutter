@@ -48,7 +48,7 @@ void main() {
       expect(html, contains('onClose'));
       expect(html, contains('getSetIsResponseSendingFinished'));
       expect(html, contains('getSetIsError'));
-      expect(html, contains('window.ReactNativeWebView = { postMessage'));
+      expect(html, contains('function postFormbricksMessage'));
       expect(html, contains('window.open = function'));
       expect(html, contains('Formbricks.postMessage'));
       expect(html, contains('"isWebEnvironment":false'));

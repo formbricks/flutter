@@ -2,7 +2,7 @@
 ///
 /// The runtime contract is `window.formbricksSurveys.renderSurvey({...})`. The
 /// Flutter-specific additions are:
-///   * a `window.ReactNativeWebView` shim that forwards `postMessage` to the
+///   * a `postFormbricksMessage` helper that forwards lifecycle payloads to the
 ///     `Formbricks` JavaScript channel, and
 ///   * a `window.open` override that routes pop-ups through `onOpenExternalURL`
 ///     (Android enables multi-window by default with no public API to disable
@@ -96,10 +96,9 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
     </body>
 
     <script type="text/javascript">
-      window.ReactNativeWebView = { postMessage: function (m) { Formbricks.postMessage(m); } };
       function postFormbricksMessage(payload) {
         try {
-          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+          Formbricks.postMessage(JSON.stringify(payload));
         } catch (e) {}
       }
       window.open = function (u) { postFormbricksMessage({ onOpenExternalURL: true, onOpenExternalURLParams: { url: String(u) } }); return null; };
@@ -124,15 +123,15 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
       };
 
       function onClose() {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ onClose: true }));
+        postFormbricksMessage({ onClose: true });
       };
 
       function onDisplayCreated() {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ onDisplayCreated: true }));
+        postFormbricksMessage({ onDisplayCreated: true });
       };
 
       function onResponseCreated() {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ onResponseCreated: true }));
+        postFormbricksMessage({ onResponseCreated: true });
       };
 
       function getSetIsResponseSendingFinished() { /* noop */ };
