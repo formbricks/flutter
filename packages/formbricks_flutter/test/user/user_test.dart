@@ -1,11 +1,30 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:formbricks_flutter/src/common/api_client.dart';
 import 'package:formbricks_flutter/src/common/config.dart';
 import 'package:formbricks_flutter/src/common/logger.dart';
 import 'package:formbricks_flutter/src/user/update_queue.dart';
 import 'package:formbricks_flutter/src/user/user.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A stub API client so the debounced flush never performs real network I/O.
+ApiClient _noopApi() => ApiClient(
+      appUrl: 'https://app.formbricks.com',
+      workspaceId: 'wsp_1',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'data': {
+              'state': {'expiresAt': null, 'data': <String, dynamic>{}},
+            },
+          }),
+          200,
+        ),
+      ),
+    );
 
 String _configJson({String? userId}) => jsonEncode({
       'workspaceId': 'wsp_1',
@@ -64,7 +83,9 @@ void main() {
 
     test('different value when one set → tearDown then queue new id', () async {
       final config = await _seed(userId: 'old');
-      final queue = UpdateQueue.instance..configOverride = config;
+      final queue = UpdateQueue.instance
+        ..configOverride = config
+        ..apiClientOverride = _noopApi();
 
       final result = await setUserId('new', config: config, queue: queue);
 
@@ -78,7 +99,9 @@ void main() {
 
     test('from anonymous → no tearDown, id queued', () async {
       final config = await _seed();
-      final queue = UpdateQueue.instance..configOverride = config;
+      final queue = UpdateQueue.instance
+        ..configOverride = config
+        ..apiClientOverride = _noopApi();
 
       final result = await setUserId('u1', config: config, queue: queue);
 

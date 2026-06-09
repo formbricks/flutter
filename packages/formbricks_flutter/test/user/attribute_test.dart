@@ -1,11 +1,30 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:formbricks_flutter/src/common/api_client.dart';
 import 'package:formbricks_flutter/src/common/config.dart';
 import 'package:formbricks_flutter/src/common/logger.dart';
 import 'package:formbricks_flutter/src/user/attribute.dart';
 import 'package:formbricks_flutter/src/user/update_queue.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A stub API client so a debounced flush never performs real network I/O.
+ApiClient _noopApi() => ApiClient(
+      appUrl: 'https://app.formbricks.com',
+      workspaceId: 'wsp_1',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'data': {
+              'state': {'expiresAt': null, 'data': <String, dynamic>{}},
+            },
+          }),
+          200,
+        ),
+      ),
+    );
 
 String _configJson() => jsonEncode({
       'workspaceId': 'wsp_1',
@@ -45,7 +64,9 @@ void main() {
     Logger.resetInstance();
     UpdateQueue.resetInstance();
     config = await _seed();
-    queue = UpdateQueue.instance..configOverride = config;
+    queue = UpdateQueue.instance
+      ..configOverride = config
+      ..apiClientOverride = _noopApi();
   });
 
   tearDown(UpdateQueue.resetInstance);
