@@ -143,25 +143,99 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
       );
   }
 
-  void _stub(BuildContext context, String action) {
-    ScaffoldMessenger.of(context)
+  /// Runs an identity command and reports the result in a snackbar.
+  ///
+  /// The user-update queue debounces the backend call ~500 ms after the last
+  /// identity/attribute change, so an `ok` here means the command was accepted,
+  /// not that the network round-trip has finished.
+  Future<void> _runAction(
+    BuildContext context,
+    String action,
+    Future<Result<void, FormbricksError>> Function() op,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    String message;
+    try {
+      final result = await op();
+      message = switch (result) {
+        Ok() => '$action -> ok',
+        Err(:final error) => '$action -> ${error.code.wire}: ${error.message}',
+      };
+    } on FormbricksError catch (e) {
+      message = '$action -> ${e.code.wire}: ${e.message}';
+    }
+    if (!mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+      );
+  }
+
+  /// Reads the persisted config and dumps it to the console.
+  Future<void> _logStorage(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final raw = await Formbricks.debugStoredConfig();
+    debugPrint('Formbricks local storage: ${raw ?? '<empty>'}');
+    if (!mounted) return;
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('$action - not wired to the SDK yet'),
-          duration: const Duration(seconds: 1),
+          content: Text(
+            raw == null
+                ? 'local storage is empty'
+                : 'local storage logged to console (${raw.length} chars)',
+          ),
         ),
+      );
+  }
+
+  /// Clears the persisted config + in-memory copy.
+  Future<void> _clearStorage(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Formbricks.debugClearStoredConfig();
+    if (!mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('local storage cleared')),
       );
   }
 
   @override
   Widget build(BuildContext context) {
-    final stubActions = <({String label, String action})>[
-      (label: 'Set userId', action: "setUserId('random-user-id')"),
-      (label: 'Set User Attributes (multiple)', action: 'setAttributes({...})'),
-      (label: 'Set User Attribute (single)', action: "setAttribute('k', 'v')"),
-      (label: 'Set Language (de)', action: "setLanguage('de')"),
-      (label: 'Logout', action: 'logout()'),
+    final identityActions =
+        <({String label, String action, Future<Result<void, FormbricksError>> Function() op})>[
+      (
+        label: 'Set userId',
+        action: "setUserId('playground-user')",
+        op: () => Formbricks.setUserId('playground-user'),
+      ),
+      (
+        label: 'Set User Attributes (multiple)',
+        action: 'setAttributes({plan, mrr, signup_date})',
+        op: () => Formbricks.setAttributes({
+          'plan': 'pro',
+          'mrr': 99,
+          'signup_date': DateTime.now(),
+        }),
+      ),
+      (
+        label: 'Set User Attribute (single)',
+        action: "setAttribute('source', 'playground')",
+        op: () => Formbricks.setAttribute('source', 'playground'),
+      ),
+      (
+        label: 'Set Language (de)',
+        action: "setLanguage('de')",
+        op: () => Formbricks.setLanguage('de'),
+      ),
+      (
+        label: 'Logout',
+        action: 'logout()',
+        op: Formbricks.logout,
+      ),
     ];
     final textTheme = Theme.of(context).textTheme;
 
@@ -250,13 +324,29 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ],
                 const Divider(height: 40),
 
-                for (final a in stubActions) ...[
+                for (final a in identityActions) ...[
                   FilledButton.tonal(
-                    onPressed: () => _stub(context, a.action),
+                    onPressed: _connected
+                        ? () => _runAction(context, a.action, a.op)
+                        : null,
                     child: Text(a.label),
                   ),
                   const SizedBox(height: 12),
                 ],
+
+                const Divider(height: 40),
+                Text('Local storage', style: textTheme.titleSmall),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => _logStorage(context),
+                  child: const Text('Log Local Storage'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => _clearStorage(context),
+                  child: const Text('Clear Local Storage'),
+                ),
+                const SizedBox(height: 12),
 
                 // Mounted once connected so triggered surveys can render
                 // against the connected workspace.
