@@ -113,7 +113,6 @@ bool _hasValidShape(Map<String, dynamic> map) {
     'onResponseCreated',
     'onOpenExternalURL',
     'onFinished',
-    'onFilePick',
   ];
   for (final key in boolFlags) {
     final value = map[key];

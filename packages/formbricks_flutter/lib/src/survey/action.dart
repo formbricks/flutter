@@ -121,7 +121,7 @@ TSurvey? _tryParseSurvey(Object? entry) {
   try {
     return TSurvey.fromJson((entry as Map).cast<String, dynamic>());
   } catch (e) {
-    Logger.error('Skipping malformed cached survey: $e');
+    Logger.error('Skipping malformed survey in workspace state: $e');
     return null;
   }
 }
@@ -130,7 +130,7 @@ TActionClass? _tryParseActionClass(Object? entry) {
   try {
     return TActionClass.fromJson((entry as Map).cast<String, dynamic>());
   } catch (e) {
-    Logger.error('Skipping malformed cached action class: $e');
+    Logger.error('Skipping malformed action class in workspace state: $e');
     return null;
   }
 }

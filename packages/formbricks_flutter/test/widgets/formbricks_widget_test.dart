@@ -24,6 +24,7 @@ class _StubHost {
     required String appUrl,
     required void Function(WebViewEvent event) onEvent,
     LaunchUrlFn? launch,
+    VoidCallback? onLoadError,
   }) {
     this.onEvent = onEvent;
     return const SizedBox(key: Key('stub-webview'), width: 50, height: 50);

@@ -44,11 +44,14 @@ class Logger {
   void _log(String message, LogLevel level) {
     if (level == LogLevel.debug && _level != LogLevel.debug) return;
     final timestamp = clock.now().toIso8601String();
+    final formatted =
+        '🧱 Formbricks - $timestamp [${level.name.toUpperCase()}] - $message';
     developer.log(
-      '🧱 Formbricks - $timestamp [${level.name.toUpperCase()}] - $message',
+      formatted,
       name: 'Formbricks',
       level: level == LogLevel.error ? 1000 : 500,
     );
+    if (kDebugMode) debugPrint(formatted);
   }
 
   /// Resets the singleton level to the default. Test-only.

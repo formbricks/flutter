@@ -9,7 +9,6 @@ library;
 import 'dart:async';
 
 import 'package:clock/clock.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../common/config.dart';
@@ -185,6 +184,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
           appUrl: appUrl,
           onEvent: _onEvent,
           launch: widget.launch,
+          onLoadError: _handleWebViewLoadError,
         ),
       ),
     );
@@ -202,8 +202,14 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       case CloseEvent():
         _closeSurvey();
       case ConsoleEvent(:final log):
-        if (kDebugMode) Logger.debug('[Console] $log');
+        Logger.debug('[Console] $log');
     }
+  }
+
+  void _handleWebViewLoadError() {
+    if (!mounted) return;
+    Logger.error('Survey WebView failed to load. Closing survey.');
+    _closeSurvey();
   }
 
   Future<void> _recordDisplay() async {

@@ -96,15 +96,31 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
     </body>
 
     <script type="text/javascript">
-    window.ReactNativeWebView = { postMessage: function (m) { Formbricks.postMessage(m); } };
-    window.open = function (u) { try { window.ReactNativeWebView.postMessage(JSON.stringify({ onOpenExternalURL: true, onOpenExternalURLParams: { url: String(u) } })); } catch (e) {} return null; };
-    const consoleLog = (type, log) => window.ReactNativeWebView.postMessage(JSON.stringify({'type': 'Console', 'data': {'type': type, 'log': log}}));
-    console = {
-        log: (log) => consoleLog('log', log),
-        debug: (log) => consoleLog('debug', log),
-        info: (log) => consoleLog('info', log),
-        warn: (log) => consoleLog('warn', log),
-        error: (log) => consoleLog('error', log),
+      window.ReactNativeWebView = { postMessage: function (m) { Formbricks.postMessage(m); } };
+      function postFormbricksMessage(payload) {
+        try {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        } catch (e) {}
+      }
+      window.open = function (u) { postFormbricksMessage({ onOpenExternalURL: true, onOpenExternalURLParams: { url: String(u) } }); return null; };
+      const stringifyLog = (value) => {
+        if (value instanceof Error) return value.message;
+        if (typeof value === 'object') {
+          try {
+            return JSON.stringify(value);
+          } catch (e) {
+            return String(value);
+          }
+        }
+        return String(value);
+      };
+      const consoleLog = (type, logs) => postFormbricksMessage({'type': 'Console', 'data': {'type': type, 'log': logs.map(stringifyLog).join(' ')}});
+      console = {
+        log: (...logs) => consoleLog('log', logs),
+        debug: (...logs) => consoleLog('debug', logs),
+        info: (...logs) => consoleLog('info', logs),
+        warn: (...logs) => consoleLog('warn', logs),
+        error: (...logs) => consoleLog('error', logs),
       };
 
       function onClose() {
@@ -122,26 +138,51 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
       function getSetIsResponseSendingFinished() { /* noop */ };
       function getSetIsError() { /* noop */ };
 
-      function loadSurvey() {
-        const options = $optionsJson;
-        const surveyProps = {
-          ...options,
-          onDisplayCreated,
-          onResponseCreated,
-          onClose,
-          getSetIsResponseSendingFinished,
-          getSetIsError,
-        };
+      let closedForError = false;
+      function closeOnError(message, error) {
+        if (closedForError) return;
+        closedForError = true;
+        console.error(message, error || '');
+        postFormbricksMessage({ onClose: true });
+      }
 
-        window.formbricksSurveys.renderSurvey(surveyProps);
+      function loadSurvey() {
+        try {
+          const options = $optionsJson;
+          const surveyProps = {
+            ...options,
+            onDisplayCreated,
+            onResponseCreated,
+            onClose,
+            getSetIsResponseSendingFinished,
+            getSetIsError,
+          };
+
+          const runtime = window.formbricksSurveys;
+          if (!runtime || typeof runtime.renderSurvey !== 'function') {
+            closeOnError('Formbricks Surveys library is unavailable.');
+            return;
+          }
+          runtime.renderSurvey(surveyProps);
+        } catch (error) {
+          closeOnError('Failed to render Formbricks survey:', error);
+        }
       }
 
       const script = document.createElement("script");
       script.src = $scriptUrlJson;
       script.async = true;
-      script.onload = () => loadSurvey();
+      const scriptLoadTimeout = window.setTimeout(
+        () => closeOnError('Timed out loading Formbricks Surveys library.'),
+        15000,
+      );
+      script.onload = () => {
+        window.clearTimeout(scriptLoadTimeout);
+        if (!closedForError) loadSurvey();
+      };
       script.onerror = (error) => {
-        console.error("Failed to load Formbricks Surveys library:", error);
+        window.clearTimeout(scriptLoadTimeout);
+        closeOnError('Failed to load Formbricks Surveys library:', error);
       };
 
       document.head.appendChild(script);

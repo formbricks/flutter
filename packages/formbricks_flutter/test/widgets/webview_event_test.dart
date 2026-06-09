@@ -64,5 +64,11 @@ void main() {
     test('well-formed but non-actionable payload → empty (quiet)', () {
       expect(parseWebViewEvents('{"onFinished":true}'), isEmpty);
     });
+
+    test('file-pick payload is ignored by the Flutter bridge', () {
+      final events = parseWebViewEvents('{"onFilePick":"handled-by-runtime"}');
+
+      expect(events, isEmpty);
+    });
   });
 }

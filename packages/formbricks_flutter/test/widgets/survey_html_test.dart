@@ -41,7 +41,8 @@ void main() {
         () {
       final html = buildSurveyHtml(_opts());
       expect(html, contains('https://app.formbricks.com/js/surveys.umd.cjs'));
-      expect(html, contains('window.formbricksSurveys.renderSurvey'));
+      expect(html, contains('const runtime = window.formbricksSurveys'));
+      expect(html, contains('runtime.renderSurvey'));
       expect(html, contains('onDisplayCreated'));
       expect(html, contains('onResponseCreated'));
       expect(html, contains('onClose'));
@@ -51,6 +52,32 @@ void main() {
       expect(html, contains('window.open = function'));
       expect(html, contains('Formbricks.postMessage'));
       expect(html, contains('"isWebEnvironment":false'));
+    });
+
+    test('script and runtime failures close the survey route', () {
+      final html = buildSurveyHtml(_opts());
+      const timeoutClose =
+          "closeOnError('Timed out loading Formbricks Surveys library.')";
+
+      expect(html, contains('function closeOnError'));
+      expect(html, contains('let closedForError = false'));
+      expect(html, contains('if (!closedForError) loadSurvey()'));
+      expect(html, contains('postFormbricksMessage({ onClose: true })'));
+      expect(html, contains("typeof runtime.renderSurvey !== 'function'"));
+      expect(html, contains('script.onerror = (error) =>'));
+      expect(html, contains('scriptLoadTimeout'));
+      expect(html, contains(timeoutClose));
+      expect(
+        html,
+        contains("closeOnError('Failed to render Formbricks survey:'"),
+      );
+    });
+
+    test('console bridge forwards multiple log arguments', () {
+      final html = buildSurveyHtml(_opts());
+
+      expect(html, contains('(...logs) => consoleLog'));
+      expect(html, contains("logs.map(stringifyLog).join(' ')"));
     });
 
     test('embeds the full survey JSON incl. unmodelled fields', () {

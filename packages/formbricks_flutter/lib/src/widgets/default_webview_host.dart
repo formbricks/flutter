@@ -25,6 +25,7 @@ typedef WebViewHostBuilder = Widget Function(
   required String appUrl,
   required void Function(WebViewEvent event) onEvent,
   LaunchUrlFn? launch,
+  VoidCallback? onLoadError,
 });
 
 /// The production [WebViewHostBuilder] backed by `webview_flutter`.
@@ -40,12 +41,14 @@ Widget defaultWebViewHost(
   required String appUrl,
   required void Function(WebViewEvent event) onEvent,
   LaunchUrlFn? launch,
+  VoidCallback? onLoadError,
 }) {
   return _DefaultWebViewHost(
     html: html,
     appUrl: appUrl,
     onEvent: onEvent,
     launch: launch,
+    onLoadError: onLoadError,
   );
 }
 
@@ -55,12 +58,14 @@ class _DefaultWebViewHost extends StatefulWidget {
     required this.appUrl,
     required this.onEvent,
     this.launch,
+    this.onLoadError,
   });
 
   final String html;
   final String appUrl;
   final void Function(WebViewEvent event) onEvent;
   final LaunchUrlFn? launch;
+  final VoidCallback? onLoadError;
 
   @override
   State<_DefaultWebViewHost> createState() => _DefaultWebViewHostState();
@@ -120,14 +125,24 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
         ),
       );
 
-    unawaited(_hardenAndLoad(_controller, widget.html));
+    unawaited(
+      _hardenAndLoad(
+        _controller,
+        widget.html,
+        onError: widget.onLoadError,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) => WebViewWidget(controller: _controller);
 }
 
-Future<void> _hardenAndLoad(WebViewController controller, String html) async {
+Future<void> _hardenAndLoad(
+  WebViewController controller,
+  String html, {
+  VoidCallback? onError,
+}) async {
   try {
     final platform = controller.platform;
     if (platform is AndroidWebViewController) {
@@ -139,5 +154,6 @@ Future<void> _hardenAndLoad(WebViewController controller, String html) async {
     await controller.loadHtmlString(html);
   } catch (e, stackTrace) {
     Logger.error('Failed to initialize survey WebView: $e\n$stackTrace');
+    onError?.call();
   }
 }

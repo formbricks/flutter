@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 /// event callback so tests can fire bridge events, and renders a keyed box.
 class _StubHost {
   void Function(WebViewEvent)? onEvent;
+  VoidCallback? onLoadError;
   String? html;
 
   Widget build(
@@ -25,8 +26,10 @@ class _StubHost {
     required String appUrl,
     required void Function(WebViewEvent event) onEvent,
     LaunchUrlFn? launch,
+    VoidCallback? onLoadError,
   }) {
     this.onEvent = onEvent;
+    this.onLoadError = onLoadError;
     this.html = html;
     return const SizedBox(key: Key('stub-webview'), width: 50, height: 50);
   }
@@ -196,6 +199,21 @@ void main() {
     expect(find.byKey(_stub), findsOneWidget);
 
     host.onEvent!(const CloseEvent());
+    await tester.pump();
+    await tester.pump();
+
+    expect(SurveyStore.instance.survey, isNull);
+    expect(find.byKey(_stub), findsNothing);
+  });
+
+  testWidgets('WebView load errors dismiss the modal and reset the store',
+      (tester) async {
+    await _seedConfig();
+    final host =
+        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    expect(find.byKey(_stub), findsOneWidget);
+
+    host.onLoadError!();
     await tester.pump();
     await tester.pump();
 
