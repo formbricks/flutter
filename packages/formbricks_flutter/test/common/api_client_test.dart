@@ -212,8 +212,8 @@ void main() {
     });
   });
 
-  group('headers', () {
-    test('isDebug adds Cache-Control: no-cache', () async {
+  group('debug cache-busting', () {
+    test('isDebug adds Cache-Control + Pragma no-cache headers', () async {
       late http.Request captured;
       final mock = MockClient((req) async {
         captured = req;
@@ -222,9 +222,22 @@ void main() {
 
       await _client(mock, isDebug: true).getWorkspaceState();
       expect(captured.headers['cache-control'], 'no-cache');
+      expect(captured.headers['pragma'], 'no-cache');
     });
 
-    test('default does not set Cache-Control', () async {
+    test('isDebug appends a cache-busting query param on GET', () async {
+      late http.Request captured;
+      final mock = MockClient((req) async {
+        captured = req;
+        return http.Response(_envBody({'settings': <String, dynamic>{}}), 200);
+      });
+
+      await _client(mock, isDebug: true).getWorkspaceState();
+      expect(captured.url.path, '/api/v2/client/$_workspaceId/environment');
+      expect(captured.url.queryParameters.containsKey('_fb_nocache'), isTrue);
+    });
+
+    test('default sets no cache headers and no cache-busting param', () async {
       late http.Request captured;
       final mock = MockClient((req) async {
         captured = req;
@@ -233,6 +246,19 @@ void main() {
 
       await _client(mock).getWorkspaceState();
       expect(captured.headers.containsKey('cache-control'), isFalse);
+      expect(captured.headers.containsKey('pragma'), isFalse);
+      expect(captured.url.queryParameters.containsKey('_fb_nocache'), isFalse);
+    });
+
+    test('does not add the cache-busting param to a POST', () async {
+      late http.Request captured;
+      final mock = MockClient((req) async {
+        captured = req;
+        return http.Response(_userBody(), 200);
+      });
+
+      await _client(mock, isDebug: true).createOrUpdateUser(userId: 'u1');
+      expect(captured.url.queryParameters.containsKey('_fb_nocache'), isFalse);
     });
   });
 }

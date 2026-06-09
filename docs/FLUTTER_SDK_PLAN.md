@@ -107,22 +107,22 @@ await Formbricks.logout();
 
 ### Internal architecture (mirrors `packages/react-native/src/lib/`)
 
-| Concern | RN file | Flutter equivalent |
-|---|---|---|
-| Command queue (sequential public API) | `lib/common/command-queue.ts` | `lib/src/common/command_queue.dart` — `Future`-based queue, single in-flight worker |
-| Persistent config singleton | `lib/common/config.ts` | `lib/src/common/config.dart` — `FormbricksConfig` singleton wrapping `SharedPreferences` |
-| AsyncStorage shim | `lib/common/storage.ts` | direct `SharedPreferences` use, no shim needed |
-| HTTP client | `lib/common/api.ts` | `lib/src/common/api_client.dart` — thin wrapper over `package:http` `Client` |
-| Setup orchestration | `lib/common/setup.ts` | `lib/src/common/setup.dart` |
-| Logger | `lib/common/logger.ts` | `lib/src/common/logger.dart` — same `🧱 Formbricks - ...` format, `debug`/`error` levels |
-| Expiry tick listeners | `lib/common/event-listeners.ts` | `lib/src/common/expiry_ticker.dart` — `Timer.periodic`, lifecycle-aware (cancel on `AppLifecycleState.paused`, restart on `resumed`) |
-| Survey trigger / `track` | `lib/survey/action.ts` | `lib/src/survey/action.dart` |
-| In-memory survey store + listeners | `lib/survey/store.ts` | `lib/src/survey/survey_store.dart` — `ValueNotifier<TSurvey?>` (replaces RN's `useSyncExternalStore`) |
-| User update debouncer | `lib/user/update-queue.ts` | `lib/src/user/update_queue.dart` — 500 ms debounce, single-flight |
-| Workspace state fetch | `lib/workspace/state.ts` | `lib/src/workspace/workspace_state.dart` |
-| Survey filtering (`displayOption`, `recontactDays`, segments) | `lib/common/utils.ts` `filterSurveys` | `lib/src/common/filter_surveys.dart` |
-| WebView host | `components/survey-web-view.tsx` | `lib/src/widgets/survey_webview.dart` using `webview_flutter` `WebViewController`. Same generated `<html>` template — keep the inline JS bridge byte-for-byte where possible so the contract with `surveys.umd.cjs` stays identical |
-| Top-level Formbricks widget | `components/formbricks.tsx` | `lib/src/widgets/formbricks_widget.dart` — `StatefulWidget` listening to `SurveyStore` via `AnimatedBuilder` / `ValueListenableBuilder` |
+| Concern                                                       | RN file                               | Flutter equivalent                                                                                                                                                                                                                  |
+| ------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command queue (sequential public API)                         | `lib/common/command-queue.ts`         | `lib/src/common/command_queue.dart` — `Future`-based queue, single in-flight worker                                                                                                                                                 |
+| Persistent config singleton                                   | `lib/common/config.ts`                | `lib/src/common/config.dart` — `FormbricksConfig` singleton wrapping `SharedPreferences`                                                                                                                                            |
+| AsyncStorage shim                                             | `lib/common/storage.ts`               | direct `SharedPreferences` use, no shim needed                                                                                                                                                                                      |
+| HTTP client                                                   | `lib/common/api.ts`                   | `lib/src/common/api_client.dart` — thin wrapper over `package:http` `Client`                                                                                                                                                        |
+| Setup orchestration                                           | `lib/common/setup.ts`                 | `lib/src/common/setup.dart`                                                                                                                                                                                                         |
+| Logger                                                        | `lib/common/logger.ts`                | `lib/src/common/logger.dart` — same `🧱 Formbricks - ...` format, `debug`/`error` levels                                                                                                                                            |
+| Expiry tick listeners                                         | `lib/common/event-listeners.ts`       | `lib/src/common/expiry_ticker.dart` — `Timer.periodic`, lifecycle-aware (cancel on `AppLifecycleState.paused`, restart on `resumed`)                                                                                                |
+| Survey trigger / `track`                                      | `lib/survey/action.ts`                | `lib/src/survey/action.dart`                                                                                                                                                                                                        |
+| In-memory survey store + listeners                            | `lib/survey/store.ts`                 | `lib/src/survey/survey_store.dart` — `ValueNotifier<TSurvey?>` (replaces RN's `useSyncExternalStore`)                                                                                                                               |
+| User update debouncer                                         | `lib/user/update-queue.ts`            | `lib/src/user/update_queue.dart` — 500 ms debounce, single-flight                                                                                                                                                                   |
+| Workspace state fetch                                         | `lib/workspace/state.ts`              | `lib/src/workspace/workspace_state.dart`                                                                                                                                                                                            |
+| Survey filtering (`displayOption`, `recontactDays`, segments) | `lib/common/utils.ts` `filterSurveys` | `lib/src/common/filter_surveys.dart`                                                                                                                                                                                                |
+| WebView host                                                  | `components/survey-web-view.tsx`      | `lib/src/widgets/survey_webview.dart` using `webview_flutter` `WebViewController`. Same generated `<html>` template — keep the inline JS bridge byte-for-byte where possible so the contract with `surveys.umd.cjs` stays identical |
+| Top-level Formbricks widget                                   | `components/formbricks.tsx`           | `lib/src/widgets/formbricks_widget.dart` — `StatefulWidget` listening to `SurveyStore` via `AnimatedBuilder` / `ValueListenableBuilder`                                                                                             |
 
 ### Command queue
 
@@ -192,9 +192,15 @@ Dates serialize as ISO 8601 strings (Dart `DateTime.toIso8601String()` ↔ JS `n
 JS → Dart (via `JavaScriptChannel`, replaces `window.ReactNativeWebView.postMessage`):
 
 ```js
-function onClose()            { Formbricks.postMessage(JSON.stringify({ onClose: true })); }
-function onDisplayCreated()   { Formbricks.postMessage(JSON.stringify({ onDisplayCreated: true })); }
-function onResponseCreated()  { Formbricks.postMessage(JSON.stringify({ onResponseCreated: true })); }
+function onClose() {
+  Formbricks.postMessage(JSON.stringify({ onClose: true }));
+}
+function onDisplayCreated() {
+  Formbricks.postMessage(JSON.stringify({ onDisplayCreated: true }));
+}
+function onResponseCreated() {
+  Formbricks.postMessage(JSON.stringify({ onResponseCreated: true }));
+}
 // console.* → { type: 'Console', data: { type, log } }  (dev only)
 ```
 
@@ -238,6 +244,7 @@ No third parties. The SDK only talks to the customer's `appUrl` (Formbricks Clou
 ### Does this affect tenant isolation?
 
 The `workspaceId` scopes all API calls. The SDK MUST:
+
 - Reject `appUrl` values that don't parse as `http://` or `https://` (port `survey-script-url.ts:8–10`).
 - Enforce same-origin for in-WebView navigation; any URL whose origin ≠ `appUrl` origin is opened via `url_launcher` instead of inside the WebView (port `survey-web-view.tsx:275–305`).
 - Reject WebView messages that don't validate against the expected shape.
@@ -266,24 +273,24 @@ No new permissions. The SDK uses the **embedding app's** existing internet permi
 
 ### Open questions
 
-- **Repo layout**: ship as a new repo `formbricks/formbricks-flutter`, or add `packages/flutter` to this monorepo? RN lives in its own repo today. Flutter as a new repo keeps releases independent; sibling monorepo improves shared-spec evolution. *Recommendation: new repo, mirror the RN repo structure.*
+- **Repo layout**: ship as a new repo `formbricks/formbricks-flutter`, or add `packages/flutter` to this monorepo? RN lives in its own repo today. Flutter as a new repo keeps releases independent; sibling monorepo improves shared-spec evolution. _Recommendation: new repo, mirror the RN repo structure._
 - **Versioning**: do we align v1.0.0 of Flutter SDK with the workspace API generation (V5)? If yes, we lock the public API around the workspace-only world from day one.
 - **Survey runtime bundle URL**: we currently load `/js/surveys.umd.cjs` from the customer's `appUrl`. For self-hosters running airgapped, this requires their own static asset hosting — same constraint as RN, but worth re-confirming with the self-host docs team.
 - **`displayPercentage`**: RN uses `Math.random()` which is fine for non-security gating. Dart's `Random()` is equivalent. No question here, just noting we will not import `dart:math` `Random.secure()` for this gate.
-- **`flutter_secure_storage` default vs opt-in**: do we keep parity with RN (unencrypted) or upgrade by default? Tradeoff: encrypted storage costs ~250 KB on Android, breaks reads after a clear-on-uninstall edge case on iOS, and requires native keychain entitlements. *Recommendation: opt-in, document loudly.*
+- **`flutter_secure_storage` default vs opt-in**: do we keep parity with RN (unencrypted) or upgrade by default? Tradeoff: encrypted storage costs ~250 KB on Android, breaks reads after a clear-on-uninstall edge case on iOS, and requires native keychain entitlements. _Recommendation: opt-in, document loudly._
 
 ### Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| WebView Android touch-event regressions (RN hit this — see `formbricks.tsx:56–61` `pointerEvents="box-none"`) | Med | Med | Wrap `WebView` in `Stack` with `IgnorePointer` outside the active survey area; integration test on a real Android device + Pixel emulator before GA |
-| `webview_flutter` Android requires Hybrid Composition / SurfaceAndroidWebView quirks → keyboard avoidance bugs (RN had to add `KeyboardAvoidingView`) | Med | Med | Test text input questions on Android with soft keyboard early; default to `MediaQuery.viewInsets` padding inside the modal route |
-| Survey script (`surveys.umd.cjs`) makes a breaking change to the JS→host message shape | Low | High | Lock the bridge schema in a shared spec doc with the web team; run the integration test suite against the prod surveys script on every release |
-| `SharedPreferences` size limit (~few MB on Android) blown by large cached `workspace.surveys` payloads | Low | Med | Cap cached `surveys` count per workspace; surface a warning log when serialized config > 256 KB |
-| Apple App Store rejects the embedded WebView as a "browser-like" app | Very low | High | Survey WebView is modal, no URL bar, no general browsing — same pattern Apple has accepted from countless in-app survey SDKs (Hotjar, Sprig, etc.). Document review notes for the App Store review team |
-| Pub.dev publish account / package name squatting | Low | Med | Reserve `formbricks_flutter` (and `formbricks`) on pub.dev now under `formbricks.com` verified publisher |
-| Flutter SDK drifts out of parity with RN as new features land on RN | Med | Med | Shared client-API contract doc; quarterly parity review; mark RN as the canonical reference until Flutter reaches v1.0 |
-| Customers ship the SDK on Flutter Web (out of scope) and file bugs | Med | Low | Add a runtime guard: throw a clear `UnsupportedError` with a doc link when `kIsWeb` |
+| Risk                                                                                                                                                  | Likelihood | Impact | Mitigation                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WebView Android touch-event regressions (RN hit this — see `formbricks.tsx:56–61` `pointerEvents="box-none"`)                                         | Med        | Med    | Wrap `WebView` in `Stack` with `IgnorePointer` outside the active survey area; integration test on a real Android device + Pixel emulator before GA                                                     |
+| `webview_flutter` Android requires Hybrid Composition / SurfaceAndroidWebView quirks → keyboard avoidance bugs (RN had to add `KeyboardAvoidingView`) | Med        | Med    | Test text input questions on Android with soft keyboard early; default to `MediaQuery.viewInsets` padding inside the modal route                                                                        |
+| Survey script (`surveys.umd.cjs`) makes a breaking change to the JS→host message shape                                                                | Low        | High   | Lock the bridge schema in a shared spec doc with the web team; run the integration test suite against the prod surveys script on every release                                                          |
+| `SharedPreferences` size limit (~few MB on Android) blown by large cached `workspace.surveys` payloads                                                | Low        | Med    | Cap cached `surveys` count per workspace; surface a warning log when serialized config > 256 KB                                                                                                         |
+| Apple App Store rejects the embedded WebView as a "browser-like" app                                                                                  | Very low   | High   | Survey WebView is modal, no URL bar, no general browsing — same pattern Apple has accepted from countless in-app survey SDKs (Hotjar, Sprig, etc.). Document review notes for the App Store review team |
+| Pub.dev publish account / package name squatting                                                                                                      | Low        | Med    | Reserve `formbricks_flutter` (and `formbricks`) on pub.dev now under `formbricks.com` verified publisher                                                                                                |
+| Flutter SDK drifts out of parity with RN as new features land on RN                                                                                   | Med        | Med    | Shared client-API contract doc; quarterly parity review; mark RN as the canonical reference until Flutter reaches v1.0                                                                                  |
+| Customers ship the SDK on Flutter Web (out of scope) and file bugs                                                                                    | Med        | Low    | Add a runtime guard: throw a clear `UnsupportedError` with a doc link when `kIsWeb`                                                                                                                     |
 
 ### Lessons from the RN SDK to **avoid** repeating in Flutter
 
@@ -349,25 +356,25 @@ formbricks_flutter/
 
 ## Appendix B — Parity matrix vs RN SDK
 
-| Feature | RN | Flutter v1 |
-|---|---|---|
-| `setup({appUrl, workspaceId})` | ✓ | ✓ |
-| Backward-compat `environmentId` alias | ✓ (deprecated) | ✗ (intentional) |
-| `track(name)` with action-class lookup | ✓ | ✓ |
-| `setUserId` with previous-user teardown | ✓ | ✓ |
-| `setAttribute` / `setAttributes` (string, number, Date) | ✓ | ✓ (String, num, DateTime) |
-| `setLanguage` w/o userId → local-only update | ✓ | ✓ |
-| `logout` → reset user state | ✓ | ✓ |
-| Workspace state cache + 60s expiry ticker | ✓ | ✓ (unified ticker) |
-| User state 30 min expiry refresh | ✓ | ✓ |
-| `displayOption` filtering (4 modes) | ✓ | ✓ |
-| `recontactDays` (per-survey + workspace fallback) | ✓ | ✓ |
-| `displayPercentage` gate | ✓ | ✓ |
-| Segment filtering (anonymous + identified) | ✓ | ✓ |
-| Multi-language survey resolution | ✓ | ✓ |
-| Error-state 10-min cooldown after setup fail | ✓ | ✓ (named constant) |
-| Same-origin WebView nav, external links via `url_launcher` | ✓ (`Linking`) | ✓ |
-| `displayPercentage`-style soft randomness | ✓ | ✓ |
-| Survey file upload | ✗ (stubbed) | ✗ (out of scope) |
-| Encrypted storage by default | ✗ | ✗ (opt-in slot) |
-| Offline response queue | ✗ (delegated to WebView) | ✗ (same delegation) |
+| Feature                                                    | RN                       | Flutter v1                |
+| ---------------------------------------------------------- | ------------------------ | ------------------------- |
+| `setup({appUrl, workspaceId})`                             | ✓                        | ✓                         |
+| Backward-compat `environmentId` alias                      | ✓ (deprecated)           | ✗ (intentional)           |
+| `track(name)` with action-class lookup                     | ✓                        | ✓                         |
+| `setUserId` with previous-user teardown                    | ✓                        | ✓                         |
+| `setAttribute` / `setAttributes` (string, number, Date)    | ✓                        | ✓ (String, num, DateTime) |
+| `setLanguage` w/o userId → local-only update               | ✓                        | ✓                         |
+| `logout` → reset user state                                | ✓                        | ✓                         |
+| Workspace state cache + 60s expiry ticker                  | ✓                        | ✓ (unified ticker)        |
+| User state 30 min expiry refresh                           | ✓                        | ✓                         |
+| `displayOption` filtering (4 modes)                        | ✓                        | ✓                         |
+| `recontactDays` (per-survey + workspace fallback)          | ✓                        | ✓                         |
+| `displayPercentage` gate                                   | ✓                        | ✓                         |
+| Segment filtering (anonymous + identified)                 | ✓                        | ✓                         |
+| Multi-language survey resolution                           | ✓                        | ✓                         |
+| Error-state 10-min cooldown after setup fail               | ✓                        | ✓ (named constant)        |
+| Same-origin WebView nav, external links via `url_launcher` | ✓ (`Linking`)            | ✓                         |
+| `displayPercentage`-style soft randomness                  | ✓                        | ✓                         |
+| Survey file upload                                         | ✗ (stubbed)              | ✗ (out of scope)          |
+| Encrypted storage by default                               | ✗                        | ✗ (opt-in slot)           |
+| Offline response queue                                     | ✗ (delegated to WebView) | ✗ (same delegation)       |

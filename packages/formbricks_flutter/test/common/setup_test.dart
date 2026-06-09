@@ -190,7 +190,9 @@ void main() {
 
     final config = FormbricksConfig.instance.getOrNull();
     expect(config, isNotNull);
-    expect(config!.status.isError, isTrue);
+    expect(config!.workspaceId, _workspaceId);
+    expect(config.appUrl, _appUrl);
+    expect(config.status.isError, isTrue);
     expect(config.status.expiresAt, now.add(const Duration(minutes: 10)));
   });
 
@@ -232,6 +234,43 @@ void main() {
       (_errOf(result) as SetupCooldownError).retryAt,
       now.add(const Duration(minutes: 10)),
     );
+  });
+
+  test('re-call with a different target bypasses the cooldown', () async {
+    final now = DateTime(2026, 6, 1, 12);
+    final failMock = MockClient((_) async => http.Response('{}', 500));
+
+    await withClock(Clock.fixed(now), () async {
+      await expectLater(
+        setup(
+          appUrl: _appUrl,
+          workspaceId: _workspaceId,
+          httpClient: failMock,
+          startTicker: false,
+        ),
+        throwsA(isA<FormbricksSetupError>()),
+      );
+    });
+
+    var calls = 0;
+    final mock = MockClient((_) async {
+      calls++;
+      return http.Response(_envBody(), 200);
+    });
+
+    late Result<void, FormbricksError> result;
+    await withClock(Clock.fixed(now.add(const Duration(minutes: 5))), () async {
+      result = await setup(
+        appUrl: _appUrl,
+        workspaceId: 'wsp_2',
+        httpClient: mock,
+        startTicker: false,
+      );
+    });
+
+    expect(calls, 1);
+    expect(result.isOk, isTrue);
+    expect(FormbricksConfig.instance.get().workspaceId, 'wsp_2');
   });
 
   test(
@@ -399,5 +438,31 @@ void main() {
     });
 
     expect(_errOf(result), isA<NetworkError>());
+  });
+
+  test('configures the logger to debug from build mode when no level given',
+      () async {
+    final mock = MockClient((_) async => http.Response(_envBody(), 200));
+    await setup(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+    );
+    // `flutter test` runs in debug mode.
+    expect(Logger.level, LogLevel.debug);
+  });
+
+  test('an explicit logLevel takes precedence over the build-mode default',
+      () async {
+    final mock = MockClient((_) async => http.Response(_envBody(), 200));
+    await setup(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      httpClient: mock,
+      startTicker: false,
+      logLevel: LogLevel.error,
+    );
+    expect(Logger.level, LogLevel.error);
   });
 }

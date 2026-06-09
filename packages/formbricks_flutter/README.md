@@ -35,9 +35,9 @@ try {
 - It **returns `Err`** for invalid input (missing or non-`http(s)`
   `appUrl` / `workspaceId`) and for a workspace/user sync failure when refreshing
   an existing cached config.
-- It **throws `FormbricksSetupError`** when the *first* setup attempt fails on the
+- It **throws `FormbricksSetupError`** when the _first_ setup attempt fails on the
   network/auth. The SDK then enters a 10-minute error cooldown.
-- It **returns `Err(SetupCooldownError)`** for any `setup` call made *within* that
+- It **returns `Err(SetupCooldownError)`** for any `setup` call made _within_ that
   cooldown window — the SDK stays inert (no network call), and `error.retryAt`
   says when it will try again. Distinct from `Ok` so callers don't treat the
   suppressed-retry state as "ready".

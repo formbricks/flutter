@@ -5,8 +5,8 @@
 /// on disk**, and the conversion happens *only* inside the `fromJson` / `toJson`
 /// methods here. No `DateTime.parse` anywhere else in the codebase.
 ///
-/// Survey and action-class entries are intentionally loosely typed
-/// (`Map<String, dynamic>`) until the track + survey-rendering work lands.
+/// Survey and action-class entries stay as raw JSON so render payloads can
+/// round-trip losslessly; use sites parse the fields they need.
 library;
 
 /// Parses an optional ISO-8601 string into a [DateTime]. The single inbound
@@ -91,6 +91,31 @@ class TUserData {
 
   /// The active language code, or null.
   final String? language;
+
+  /// Returns a copy with the given fields overridden.
+  ///
+  /// Sufficient for the survey-event handlers, which only *set* values
+  /// (appending displays/responses, stamping `lastDisplayAt`); clearing a field
+  /// back to null is not needed here, so the standard `?? this.x` fallback is
+  /// safe.
+  TUserData copyWith({
+    String? userId,
+    String? contactId,
+    List<String>? segments,
+    List<TDisplay>? displays,
+    List<String>? responses,
+    DateTime? lastDisplayAt,
+    String? language,
+  }) =>
+      TUserData(
+        userId: userId ?? this.userId,
+        contactId: contactId ?? this.contactId,
+        segments: segments ?? this.segments,
+        displays: displays ?? this.displays,
+        responses: responses ?? this.responses,
+        lastDisplayAt: lastDisplayAt ?? this.lastDisplayAt,
+        language: language ?? this.language,
+      );
 
   /// Encodes this user data to JSON with ISO-8601 dates.
   Map<String, dynamic> toJson() => {
@@ -286,8 +311,7 @@ class TConfig {
   /// The cached user state (anonymous by default).
   final TUserState user;
 
-  /// Surveys eligible to show. Populated by the filter logic in a later ticket;
-  /// left empty here.
+  /// Surveys eligible to show after filtering.
   final List<dynamic> filteredSurveys;
 
   /// The success/error status.

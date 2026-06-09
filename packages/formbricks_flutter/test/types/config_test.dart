@@ -90,4 +90,42 @@ void main() {
       expect(config.status.isError, isFalse);
     });
   });
+
+  group('TUserData.copyWith', () {
+    test('overrides only the given fields, preserving the rest', () {
+      final original = TUserData(
+        userId: 'u1',
+        contactId: 'c1',
+        segments: const ['seg1'],
+        displays: [TDisplay(surveyId: 's1', createdAt: DateTime(2026))],
+        responses: const ['r1'],
+        lastDisplayAt: DateTime(2026, 5, 31),
+        language: 'de',
+      );
+
+      final newDisplay = TDisplay(surveyId: 's2', createdAt: DateTime(2026, 6));
+      final updated = original.copyWith(
+        displays: [...original.displays, newDisplay],
+        responses: [...original.responses, 'r2'],
+        lastDisplayAt: DateTime(2026, 6, 2),
+      );
+
+      // Overridden.
+      expect(updated.displays.map((d) => d.surveyId), ['s1', 's2']);
+      expect(updated.responses, ['r1', 'r2']);
+      expect(updated.lastDisplayAt, DateTime(2026, 6, 2));
+      // Preserved.
+      expect(updated.userId, 'u1');
+      expect(updated.contactId, 'c1');
+      expect(updated.segments, ['seg1']);
+      expect(updated.language, 'de');
+    });
+
+    test('with no arguments returns an equivalent copy', () {
+      const original = TUserData(userId: 'u1', responses: ['r1']);
+      final copy = original.copyWith();
+      expect(copy.userId, 'u1');
+      expect(copy.responses, ['r1']);
+    });
+  });
 }

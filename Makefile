@@ -19,7 +19,7 @@ endif
 
 MELOS := $(DART) run melos
 
-.PHONY: help deps deps-lockfile get doctor analyze analyze-ci lint format format-check check
+.PHONY: help deps deps-lockfile get doctor analyze analyze-ci lint format format-docs format-docs-check format-check check
 .PHONY: test test-sdk-machine test-playground coverage test-coverage test-sdk-coverage
 .PHONY: build build-all build-android build-ios build-ios-no-codesign run run-ios run-android devices emulators
 .PHONY: pana-install pana pub-publish-dry-run pub-publish-force
@@ -78,9 +78,17 @@ analyze-ci:
 
 format:
 	$(DART) format .
+	$(MAKE) --no-print-directory format-docs
+
+format-docs:
+	npx -y prettier@3.6.2 --write "**/*.md"
+
+format-docs-check:
+	npx -y prettier@3.6.2 --check "**/*.md"
 
 format-check:
 	$(DART) format --output=none --set-exit-if-changed .
+	$(MAKE) --no-print-directory format-docs-check
 
 check: format-check analyze test
 

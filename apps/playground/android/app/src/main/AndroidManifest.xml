@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required so the survey WebView can load the Formbricks runtime
+         (`{appUrl}/js/surveys.umd.cjs`) in release/profile builds. The debug
+         manifest already declares this for the Flutter tooling. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="formbricks_playground"
         android:name="${applicationName}"
