@@ -123,9 +123,14 @@ class UpdateQueue {
     return completer.future;
   }
 
-  /// Cancels any pending flush and clears the buffer. Call on disposal/hot
-  /// reload so a dangling [Timer] can't fire after the queue is gone.
-  void dispose() {
+  /// Cancels any pending flush and drops the buffered updates without sending.
+  ///
+  /// Call on logout / identity switch so a queued change can't re-identify the
+  /// user after logout, nor leak attributes queued for one user into the next.
+  /// Also the disposal/hot-reload path: a dangling [Timer] can't fire after the
+  /// queue is cleared. The shared completer is resolved (not errored) so
+  /// fire-and-forget callers don't see a dropped batch as a failure.
+  void clear() {
     _debounce?.cancel();
     _debounce = null;
     final c = _flushCompleter;
@@ -138,6 +143,13 @@ class UpdateQueue {
   Future<void> _flush() async {
     final pending = _updates;
     if (pending == null) return;
+
+    // Snapshot, then drop the live buffer *before* any await. Anything queued
+    // during the round-trip starts a fresh batch instead of writing into the
+    // one in flight (which would otherwise get re-sent by an overlapping flush
+    // or silently wiped by this flush's exit). Failed batches are dropped (no
+    // retry) anyway, so clearing up-front changes no semantics.
+    _updates = null;
 
     final cfg = _config.get();
 
@@ -153,25 +165,18 @@ class UpdateQueue {
       attributes = await _handleLanguageWithoutUserId(attributes);
     }
 
-    // Attributes require a userId. If any remain without one, error and clear.
+    // Attributes require a userId. If any remain without one, error out. The
+    // buffer is already cleared above, so nothing re-sends.
     if (attributes.isNotEmpty &&
         (effectiveUserId == null || effectiveUserId.isEmpty)) {
       const message =
           "Formbricks can't set attributes without a userId! Please set a "
           'userId first with the setUserId function';
       Logger.error(message);
-      _updates = null;
       throw MissingFieldError('userId', message: message);
     }
 
-    // Clear the buffer regardless of how _sendUpdates resolves — a failed batch
-    // is dropped (no retry), so even an unexpected throw must not leave it
-    // buffered for the next change to re-send.
-    try {
-      await _sendUpdates(effectiveUserId, attributes);
-    } finally {
-      _updates = null;
-    }
+    await _sendUpdates(effectiveUserId, attributes);
   }
 
   /// Writes a queued `language` straight into local config (no API call) and
@@ -240,7 +245,7 @@ class UpdateQueue {
   /// Drops the singleton so each test starts clean. Test-only.
   @visibleForTesting
   static void resetInstance() {
-    _instance?.dispose();
+    _instance?.clear();
     _instance = null;
   }
 }

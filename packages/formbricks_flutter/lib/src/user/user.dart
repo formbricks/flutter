@@ -42,17 +42,29 @@ Future<Result<void, FormbricksError>> setUserId(
     Logger.debug(
       'Different userId is being set, cleaning up previous user state',
     );
+    // Drop anything queued for the previous identity so it can't be adopted by
+    // the new user. Diverges from RN, which leaves the buffer intact.
+    q.clear();
     await tearDown(config: cfg);
   }
 
   q.updateUserId(userId);
-  unawaited(q.processUpdates());
+  // Fire-and-forget: the flush already logs and recovers from failures (e.g.
+  // MissingFieldError), so swallow here to keep it off the host's unhandled-
+  // error path. Tests await processUpdates() directly and still see the error.
+  unawaited(q.processUpdates().catchError((_) {}));
   return const Result.ok(null);
 }
 
 /// Logs the current user out, resetting user state to anonymous.
-Future<Result<void, FormbricksError>> logout({FormbricksConfig? config}) async {
+Future<Result<void, FormbricksError>> logout({
+  FormbricksConfig? config,
+  UpdateQueue? queue,
+}) async {
   Logger.debug('Logging out and cleaning user state');
+  // Drop any queued update so a debounced flush can't re-identify the user
+  // after logout. Diverges from RN, which leaves the buffer intact.
+  (queue ?? UpdateQueue.instance).clear();
   await tearDown(config: config ?? FormbricksConfig.instance);
   return const Result.ok(null);
 }

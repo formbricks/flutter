@@ -340,7 +340,7 @@ void main() {
     });
   });
 
-  test('dispose cancels the pending timer — no flush afterwards', () async {
+  test('clear cancels the pending timer — no flush afterwards', () async {
     final config = await _seed(userId: 'u1');
     var calls = 0;
     final api = ApiClient(
@@ -360,7 +360,7 @@ void main() {
         ..updateAttributes({'plan': 'pro'})
         ..processUpdates();
       async.elapse(const Duration(milliseconds: 200));
-      queue.dispose();
+      queue.clear();
       async.elapse(const Duration(milliseconds: 500));
 
       expect(calls, 0);

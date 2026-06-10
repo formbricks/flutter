@@ -30,7 +30,10 @@ Future<Result<void, FormbricksError>> setAttributes(
 
   final q = queue ?? UpdateQueue.instance;
   q.updateAttributes(normalized);
-  unawaited(q.processUpdates());
+  // Fire-and-forget: the flush already logs and recovers from failures (e.g.
+  // MissingFieldError), so swallow here to keep it off the host's unhandled-
+  // error path. Tests await processUpdates() directly and still see the error.
+  unawaited(q.processUpdates().catchError((_) {}));
   return const Result.ok(null);
 }
 
