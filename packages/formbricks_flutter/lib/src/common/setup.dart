@@ -243,6 +243,26 @@ Future<Never> _handleErrorOnFirstSetup(
   );
 }
 
+/// Resets user state back to anonymous and persists it.
+///
+/// Called when switching identity (`setUserId` to a different id) and on
+/// `logout`. Mirrors RN's `tearDown` (`setup.ts:366–387`), minus the survey
+/// refilter, which lands with the filtering ticket. No-op when no config is
+/// loaded yet.
+Future<void> tearDown({FormbricksConfig? config}) async {
+  final cfg = config ?? FormbricksConfig.instance;
+  Logger.debug('Setting user state to default');
+
+  final current = cfg.getOrNull();
+  if (current == null) return;
+
+  await cfg.update(
+    current.copyWith(user: TUserState.defaultNoUserId),
+    // TODO(filtering ticket): recompute filteredSurveys against the default
+    // user state here (filterSurveys(workspace, defaultNoUserId)) — see ENG-1128.
+  );
+}
+
 NetworkError _toNetworkError(ApiErrorResponse error) => NetworkError(
       message: error.message,
       status: error.status,

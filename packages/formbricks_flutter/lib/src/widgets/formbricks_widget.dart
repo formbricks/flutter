@@ -16,6 +16,8 @@ import '../survey/action.dart' as action;
 import '../survey/survey_store.dart';
 import '../types/errors.dart';
 import '../types/survey.dart';
+import '../user/attribute.dart' as attribute;
+import '../user/user.dart' as user;
 import 'default_webview_host.dart';
 import 'survey_webview.dart';
 import 'webview_navigation.dart';
@@ -103,12 +105,76 @@ class Formbricks extends StatefulWidget {
     );
   }
 
+  /// Identifies the current contact as [userId] (`checkSetup: true`).
+  ///
+  /// Idempotent for the already-set value; switching to a different id resets
+  /// the prior user state first. The backend sync runs from the debounced
+  /// update queue, so this resolves before the network call completes.
+  static Future<Result<void, FormbricksError>> setUserId(String userId) {
+    return _queue.add<Result<void, FormbricksError>>(
+      () => user.setUserId(userId),
+      checkSetup: true,
+    );
+  }
+
+  /// Sets a single contact attribute [key] = [value] (`checkSetup: true`).
+  ///
+  /// [value] may be a `String`, `num`, or `DateTime` (dates serialize to
+  /// ISO-8601). Requires a userId to have been set; otherwise the queued update
+  /// is dropped with an error logged.
+  static Future<Result<void, FormbricksError>> setAttribute(
+    String key,
+    Object value,
+  ) {
+    return _queue.add<Result<void, FormbricksError>>(
+      () => attribute.setAttributes({key: value}),
+      checkSetup: true,
+    );
+  }
+
+  /// Sets multiple contact [attributes] at once (`checkSetup: true`).
+  ///
+  /// Values may be `String`, `num`, or `DateTime`. See [setAttribute].
+  static Future<Result<void, FormbricksError>> setAttributes(
+    Map<String, Object> attributes,
+  ) {
+    return _queue.add<Result<void, FormbricksError>>(
+      () => attribute.setAttributes(attributes),
+      checkSetup: true,
+    );
+  }
+
+  /// Sets the contact's preferred [language] (`checkSetup: true`).
+  ///
+  /// With no userId set, this updates only the local config (no network call).
+  static Future<Result<void, FormbricksError>> setLanguage(String language) {
+    return _queue.add<Result<void, FormbricksError>>(
+      () => attribute.setLanguage(language),
+      checkSetup: true,
+    );
+  }
+
+  /// Logs the current user out, resetting user state to anonymous
+  /// (`checkSetup: true`).
+  static Future<Result<void, FormbricksError>> logout() {
+    return _queue.add<Result<void, FormbricksError>>(
+      () => user.logout(),
+      checkSetup: true,
+    );
+  }
+
   /// Returns the raw JSON the SDK has persisted in `SharedPreferences` (under
   /// the `formbricks-flutter` key), or `null` if nothing is stored yet.
   static Future<String?> debugStoredConfig() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(FormbricksConfig.storageKey);
   }
+
+  /// Clears the persisted config (the `formbricks-flutter` key) and the
+  /// in-memory copy. Debug helper — the SDK stays "set up" for this process, so
+  /// the next workspace/user sync will repopulate storage.
+  static Future<void> debugClearStoredConfig() =>
+      FormbricksConfig.instance.reset();
 
   @override
   State<Formbricks> createState() => _FormbricksState();
