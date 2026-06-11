@@ -26,13 +26,18 @@ ApiClient _noopApi() => ApiClient(
       ),
     );
 
-String _configJson({String? userId}) => jsonEncode({
+String _configJson({
+  String? userId,
+  List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>> filteredSurveys = const [],
+}) =>
+    jsonEncode({
       'workspaceId': 'wsp_1',
       'appUrl': 'https://app.formbricks.com',
       'workspace': {
         'expiresAt': '2100-01-01T00:00:00.000',
         'data': {
-          'surveys': <dynamic>[],
+          'surveys': surveys,
           'actionClasses': <dynamic>[],
           'settings': <String, dynamic>{},
         },
@@ -44,12 +49,21 @@ String _configJson({String? userId}) => jsonEncode({
           'segments': ['seg_1'],
         },
       },
+      'filteredSurveys': filteredSurveys,
       'status': {'value': 'success', 'expiresAt': null},
     });
 
-Future<FormbricksConfig> _seed({String? userId}) async {
+Future<FormbricksConfig> _seed({
+  String? userId,
+  List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>> filteredSurveys = const [],
+}) async {
   SharedPreferences.setMockInitialValues({
-    FormbricksConfig.storageKey: _configJson(userId: userId),
+    FormbricksConfig.storageKey: _configJson(
+      userId: userId,
+      surveys: surveys,
+      filteredSurveys: filteredSurveys,
+    ),
   });
   FormbricksConfig.resetInstance();
   final config = FormbricksConfig.instance;
@@ -126,6 +140,36 @@ void main() {
       );
       final decoded = jsonDecode(raw!) as Map<String, dynamic>;
       expect((decoded['user'] as Map)['data']['userId'], isNull);
+    });
+
+    test('refilters surveys against the anonymous user', () async {
+      final gated = {
+        'id': 'gated',
+        'displayOption': 'respondMultiple',
+        'triggers': <dynamic>[],
+        'languages': <dynamic>[],
+        'segment': {'id': 'seg_1', 'hasFilters': true},
+      };
+      final plain = {
+        'id': 'plain',
+        'displayOption': 'respondMultiple',
+        'triggers': <dynamic>[],
+        'languages': <dynamic>[],
+      };
+      final config = await _seed(
+        userId: 'u1',
+        surveys: [gated, plain],
+        filteredSurveys: [gated],
+      );
+
+      final result = await logout(config: config);
+
+      expect(result.isOk, isTrue);
+      expect(
+        config.get().filteredSurveys.map((e) => (e as Map)['id']).toList(),
+        ['plain'],
+        reason: 'segment-filtered surveys drop after logout',
+      );
     });
   });
 }

@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks_flutter/src/common/config.dart';
 import 'package:formbricks_flutter/src/common/logger.dart';
 import 'package:formbricks_flutter/src/common/result.dart';
-import 'package:formbricks_flutter/src/common/setup.dart';
+import 'package:formbricks_flutter/src/common/setup.dart' hide tearDown;
+import 'package:formbricks_flutter/src/common/setup.dart' as fb_setup
+    show tearDown;
 import 'package:formbricks_flutter/src/types/config.dart';
 import 'package:formbricks_flutter/src/types/errors.dart';
 import 'package:http/http.dart' as http;
@@ -15,25 +17,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _appUrl = 'https://app.formbricks.com';
 const _workspaceId = 'wsp_1';
 
-String _envBody() => jsonEncode({
+String _envBody({List<Map<String, dynamic>> surveys = const []}) => jsonEncode({
       'data': {
         'expiresAt': '2100-01-01T00:00:00.000',
         'data': {
-          'surveys': <dynamic>[],
+          'surveys': surveys,
           'actionClasses': <dynamic>[],
           'settings': <String, dynamic>{},
         },
       },
     });
 
-String _userBody() => jsonEncode({
+Map<String, dynamic> _surveyJson(
+  String id, {
+  Map<String, dynamic>? segment,
+}) =>
+    {
+      'id': id,
+      'displayOption': 'respondMultiple',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+      if (segment != null) 'segment': segment,
+    };
+
+String _userBody({List<String> segments = const []}) => jsonEncode({
       'data': {
         'state': {
           'expiresAt': null,
           'data': {
             'userId': 'u1',
             'contactId': null,
-            'segments': <dynamic>[],
+            'segments': segments,
             'displays': <dynamic>[],
             'responses': <dynamic>[],
             'lastDisplayAt': null,
@@ -75,6 +89,159 @@ void main() {
       expect(config.appUrl, _appUrl);
       expect(config.workspace, isNotNull);
       expect(config.filteredSurveys, isEmpty);
+    },
+  );
+
+  test(
+    'new-config setup populates filteredSurveys against the anonymous user',
+    () async {
+      final mock = MockClient(
+        (_) async => http.Response(
+          _envBody(
+            surveys: [
+              _surveyJson('eligible'),
+              _surveyJson(
+                'gated',
+                segment: {'id': 'seg_a', 'hasFilters': true},
+              ),
+            ],
+          ),
+          200,
+        ),
+      );
+
+      final result = await setup(
+        appUrl: _appUrl,
+        workspaceId: _workspaceId,
+        httpClient: mock,
+        startTicker: false,
+      );
+
+      expect(result.isOk, isTrue);
+      final filtered = FormbricksConfig.instance.get().filteredSurveys;
+      expect(
+        filtered.map((e) => (e as Map)['id']).toList(),
+        ['eligible'],
+      );
+    },
+  );
+
+  test(
+    'matching-config sync recomputes filteredSurveys from the cache',
+    () async {
+      final now = DateTime(2026, 6, 1, 12);
+      final cached = TConfig(
+        workspaceId: _workspaceId,
+        appUrl: _appUrl,
+        workspace: TWorkspaceState(
+          expiresAt: now.add(const Duration(hours: 1)),
+          data: TWorkspaceData(
+            surveys: [
+              _surveyJson('eligible'),
+              _surveyJson(
+                'gated',
+                segment: {'id': 'seg_a', 'hasFilters': true},
+              ),
+            ],
+          ),
+        ),
+        // Stale empty set the sync must repopulate.
+        filteredSurveys: const [],
+        status: TStatus.success,
+      );
+      SharedPreferences.setMockInitialValues({
+        FormbricksConfig.storageKey: jsonEncode(cached.toJson()),
+      });
+      FormbricksConfig.resetInstance();
+
+      var calls = 0;
+      final mock = MockClient((_) async {
+        calls++;
+        return http.Response(_envBody(), 200);
+      });
+
+      late Result<void, FormbricksError> result;
+      await withClock(Clock.fixed(now), () async {
+        result = await setup(
+          appUrl: _appUrl,
+          workspaceId: _workspaceId,
+          httpClient: mock,
+          startTicker: false,
+        );
+      });
+
+      expect(result.isOk, isTrue);
+      expect(calls, 0, reason: 'valid workspace + anonymous user → no HTTP');
+      expect(
+        FormbricksConfig.instance
+            .get()
+            .filteredSurveys
+            .map((e) => (e as Map)['id'])
+            .toList(),
+        ['eligible'],
+      );
+    },
+  );
+
+  test(
+    'matching-config sync filters against the backend-resolved user',
+    () async {
+      final now = DateTime(2026, 6, 1, 12);
+      final cached = TConfig(
+        workspaceId: _workspaceId,
+        appUrl: _appUrl,
+        workspace: TWorkspaceState(
+          expiresAt: now.add(const Duration(hours: 1)),
+          data: TWorkspaceData(
+            surveys: [
+              _surveyJson('plain'),
+              _surveyJson(
+                'gated',
+                segment: {'id': 'seg_a', 'hasFilters': true},
+              ),
+            ],
+          ),
+        ),
+        // Expired identified user: filtering must use the refreshed segments.
+        user: TUserState(
+          expiresAt: now.subtract(const Duration(minutes: 1)),
+          data: const TUserData(userId: 'u1'),
+        ),
+        status: TStatus.success,
+      );
+      SharedPreferences.setMockInitialValues({
+        FormbricksConfig.storageKey: jsonEncode(cached.toJson()),
+      });
+      FormbricksConfig.resetInstance();
+
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/user')) {
+          return http.Response(_userBody(segments: ['seg_a']), 200);
+        }
+        return http.Response(_envBody(), 200);
+      });
+
+      late Result<void, FormbricksError> result;
+      await withClock(Clock.fixed(now), () async {
+        result = await setup(
+          appUrl: _appUrl,
+          workspaceId: _workspaceId,
+          httpClient: mock,
+          startTicker: false,
+        );
+      });
+
+      expect(result.isOk, isTrue);
+      expect(
+        FormbricksConfig.instance
+            .get()
+            .filteredSurveys
+            .map((e) => (e as Map)['id'])
+            .toList(),
+        ['gated'],
+        reason: 'the resolved user matched seg_a, so only the gated survey '
+            'is eligible',
+      );
     },
   );
 
@@ -464,5 +631,71 @@ void main() {
       logLevel: LogLevel.error,
     );
     expect(Logger.level, LogLevel.error);
+  });
+
+  group('tearDown', () {
+    Future<FormbricksConfig> seedConfig(TConfig cfg) async {
+      final c = FormbricksConfig.instance;
+      await c.init();
+      await c.update(cfg);
+      return c;
+    }
+
+    test('resets the user and refilters against the anonymous default',
+        () async {
+      final gated = _surveyJson(
+        'gated',
+        segment: {'id': 'seg_a', 'hasFilters': true},
+      );
+      final config = await seedConfig(
+        TConfig(
+          workspaceId: _workspaceId,
+          appUrl: _appUrl,
+          workspace: TWorkspaceState(
+            expiresAt: DateTime(2100),
+            data: TWorkspaceData(surveys: [_surveyJson('plain'), gated]),
+          ),
+          user: const TUserState(
+            expiresAt: null,
+            data: TUserData(userId: 'u1', segments: ['seg_a']),
+          ),
+          filteredSurveys: [gated],
+          status: TStatus.success,
+        ),
+      );
+
+      await fb_setup.tearDown(config: config);
+
+      final updated = config.get();
+      expect(updated.user.data.userId, isNull);
+      expect(
+        updated.filteredSurveys.map((e) => (e as Map)['id']).toList(),
+        ['plain'],
+        reason: 'segment-filtered surveys drop for the anonymous user',
+      );
+    });
+
+    test('an error-only config (no workspace) empties filteredSurveys',
+        () async {
+      final config = await seedConfig(
+        TConfig(
+          workspaceId: _workspaceId,
+          appUrl: _appUrl,
+          filteredSurveys: [_surveyJson('stale')],
+          status: const TStatus(value: 'error'),
+        ),
+      );
+
+      await fb_setup.tearDown(config: config);
+
+      expect(config.get().filteredSurveys, isEmpty);
+      expect(config.get().user.data.userId, isNull);
+    });
+
+    test('no loaded config → no-op', () async {
+      final config = FormbricksConfig.instance;
+      await fb_setup.tearDown(config: config);
+      expect(config.getOrNull(), isNull);
+    });
   });
 }
