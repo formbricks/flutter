@@ -7,6 +7,7 @@ import '../types/errors.dart';
 import 'api_client.dart';
 import 'config.dart';
 import 'expiry_ticker.dart';
+import 'filter_surveys.dart';
 import 'logger.dart';
 import 'result.dart';
 import 'time.dart';
@@ -135,7 +136,9 @@ Future<Result<void, FormbricksError>> setup({
               appUrl: normalizedAppUrl,
               workspace: value,
               user: TUserState.defaultNoUserId,
-              filteredSurveys: const [],
+              filteredSurveys: filterSurveys(value, TUserState.defaultNoUserId)
+                  .map((s) => s.toJson())
+                  .toList(),
               status: TStatus.success,
             ),
           );
@@ -196,13 +199,18 @@ Future<Result<void, FormbricksError>> _syncExistingConfig(
     user = TUserState.defaultNoUserId;
   }
 
+  final filteredSurveys = filterSurveys(workspace, user);
   await config.update(
     existing.copyWith(
       workspace: workspace,
       user: user,
-      filteredSurveys: const [],
+      filteredSurveys: filteredSurveys.map((s) => s.toJson()).toList(),
       status: TStatus.success,
     ),
+  );
+  Logger.debug(
+    'Fetched ${filteredSurveys.length} surveys during sync: '
+    '${filteredSurveys.map((s) => s.id).join(', ')}',
   );
   return const Result.ok(null);
 }
@@ -243,12 +251,11 @@ Future<Never> _handleErrorOnFirstSetup(
   );
 }
 
-/// Resets user state back to anonymous and persists it.
+/// Resets user state to anonymous, refilters surveys, and persists both.
 ///
 /// Called when switching identity (`setUserId` to a different id) and on
-/// `logout`. Mirrors RN's `tearDown` (`setup.ts:366–387`), minus the survey
-/// refilter, which lands with the filtering ticket. No-op when no config is
-/// loaded yet.
+/// `logout`. Mirrors RN's `tearDown` (`setup.ts:366–387`). No-op when no
+/// config is loaded yet.
 Future<void> tearDown({FormbricksConfig? config}) async {
   final cfg = config ?? FormbricksConfig.instance;
   Logger.debug('Setting user state to default');
@@ -256,10 +263,16 @@ Future<void> tearDown({FormbricksConfig? config}) async {
   final current = cfg.getOrNull();
   if (current == null) return;
 
+  final workspace = current.workspace;
   await cfg.update(
-    current.copyWith(user: TUserState.defaultNoUserId),
-    // TODO(filtering ticket): recompute filteredSurveys against the default
-    // user state here (filterSurveys(workspace, defaultNoUserId)) — see ENG-1128.
+    current.copyWith(
+      user: TUserState.defaultNoUserId,
+      filteredSurveys: workspace == null
+          ? const []
+          : filterSurveys(workspace, TUserState.defaultNoUserId)
+              .map((s) => s.toJson())
+              .toList(),
+    ),
   );
 }
 

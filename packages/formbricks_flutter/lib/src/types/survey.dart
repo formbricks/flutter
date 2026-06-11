@@ -18,6 +18,11 @@ class TSurvey {
     required this.delay,
     this.styling,
     this.projectOverwrites,
+    this.displayOption,
+    this.displayLimit,
+    this.recontactDays,
+    this.displayPercentage,
+    this.segment,
     required Map<String, dynamic> raw,
   }) : _raw = raw;
 
@@ -48,6 +53,15 @@ class TSurvey {
             : TProjectOverwrites.fromJson(
                 (json['projectOverwrites'] as Map).cast<String, dynamic>(),
               ),
+        displayOption: json['displayOption'] as String?,
+        displayLimit: (json['displayLimit'] as num?)?.toInt(),
+        recontactDays: (json['recontactDays'] as num?)?.toInt(),
+        displayPercentage: json['displayPercentage'] as num?,
+        segment: json['segment'] == null
+            ? null
+            : TSurveySegment.fromJson(
+                (json['segment'] as Map).cast<String, dynamic>(),
+              ),
         raw: json,
       );
 
@@ -70,6 +84,23 @@ class TSurvey {
   /// Per-project overrides for placement / click-outside / overlay.
   final TProjectOverwrites? projectOverwrites;
 
+  /// How often the survey may be shown (`respondMultiple` / `displayOnce` /
+  /// `displayMultiple` / `displaySome`); unknown values make it ineligible.
+  final String? displayOption;
+
+  /// Max number of displays for `'displaySome'`, or null for unlimited.
+  final int? displayLimit;
+
+  /// Days since the last display before showing again, or null to fall back
+  /// to the workspace `settings.recontactDays`.
+  final int? recontactDays;
+
+  /// Percentage of trigger hits that display the survey; null/0 always shows.
+  final num? displayPercentage;
+
+  /// The segment targeting this survey, or null when untargeted.
+  final TSurveySegment? segment;
+
   final Map<String, dynamic> _raw;
 
   /// Whether the survey is available in more than one language.
@@ -77,6 +108,31 @@ class TSurvey {
 
   /// The original decoded JSON, returned verbatim for the survey runtime.
   Map<String, dynamic> toJson() => _raw;
+}
+
+/// The minimal segment shape read for targeting: `{ id, hasFilters }`.
+/// Tolerates the legacy cached shape carrying a full `filters` array.
+class TSurveySegment {
+  /// Creates a segment.
+  const TSurveySegment({this.id, required this.hasFilters});
+
+  /// Builds a segment from decoded JSON.
+  factory TSurveySegment.fromJson(Map<String, dynamic> json) {
+    final hasFilters = json['hasFilters'];
+    final filters = json['filters'];
+    return TSurveySegment(
+      id: json['id'] as String?,
+      hasFilters: hasFilters is bool
+          ? hasFilters
+          : filters is List && filters.isNotEmpty,
+    );
+  }
+
+  /// The segment id matched against `user.segments`, or null.
+  final String? id;
+
+  /// Whether the segment carries filter rules.
+  final bool hasFilters;
 }
 
 /// A survey trigger. Only the action-class name is read by the SDK.

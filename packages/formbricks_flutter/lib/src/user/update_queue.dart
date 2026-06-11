@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart';
 
 import '../common/api_client.dart';
 import '../common/config.dart';
+import '../common/filter_surveys.dart';
 import '../common/logger.dart';
 import '../common/result.dart';
 import '../types/config.dart';
@@ -116,6 +117,7 @@ class UpdateQueue {
         await _flush();
         if (c != null && !c.isCompleted) c.complete();
       } catch (error, stackTrace) {
+        Logger.error('Failed to process updates: $error');
         if (c != null && !c.isCompleted) c.completeError(error, stackTrace);
       }
     });
@@ -234,9 +236,19 @@ class UpdateQueue {
         value.messages?.forEach((m) => Logger.debug('User update message: $m'));
         final hasWarnings = value.errors?.isNotEmpty ?? false;
 
-        await _config.update(_config.get().copyWith(user: value.state));
-        // TODO(filtering ticket): recompute filteredSurveys against
-        // (workspace, value.state) here — see ENG-1128.
+        // Persist the synced user and refilter in the same write.
+        final current = _config.get();
+        final workspace = current.workspace;
+        await _config.update(
+          current.copyWith(
+            user: value.state,
+            filteredSurveys: workspace == null
+                ? const []
+                : filterSurveys(workspace, value.state)
+                    .map((s) => s.toJson())
+                    .toList(),
+          ),
+        );
 
         if (!hasWarnings) Logger.debug('Updates sent successfully');
     }

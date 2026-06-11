@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../types/config.dart';
 import 'api_client.dart';
 import 'config.dart';
+import 'filter_surveys.dart';
 import 'logger.dart';
 import 'result.dart';
 import 'time.dart';
@@ -111,17 +112,27 @@ class ExpiryTicker with WidgetsBindingObserver {
     if (workspace != null && isNowExpired(workspace.expiresAt)) {
       Logger.debug('Workspace state has expired. Starting sync.');
       final result = await apiClient.getWorkspaceState();
+      // Re-read after the round-trip so concurrent writes aren't clobbered.
+      final synced = config.getOrNull();
+      if (synced == null) return;
       switch (result) {
         case Ok(:final value):
-          await config.update(snapshot.copyWith(workspace: value));
+          await config.update(
+            synced.copyWith(
+              workspace: value,
+              filteredSurveys: filterSurveys(value, synced.user)
+                  .map((s) => s.toJson())
+                  .toList(),
+            ),
+          );
         case Err(:final error):
           Logger.error('Error during workspace expiry sync: ${error.code}');
           // Extend validity so we retry later instead of hammering the backend.
           await config.update(
-            snapshot.copyWith(
+            synced.copyWith(
               workspace: TWorkspaceState(
                 expiresAt: clock.now().add(_kExtension),
-                data: workspace.data,
+                data: synced.workspace?.data ?? workspace.data,
               ),
             ),
           );
