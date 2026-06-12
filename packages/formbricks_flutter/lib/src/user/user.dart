@@ -1,7 +1,6 @@
 /// User identity: `setUserId` and `logout`.
 ///
-/// Ports the RN `lib/user/user.ts`. Queues identity changes through the
-/// [UpdateQueue] (fire-and-forget) and resets prior state via [tearDown] when
+/// Queues identity changes through the [UpdateQueue] (fire-and-forget) and resets prior state via [tearDown] when
 /// switching to a different user.
 library;
 
@@ -43,7 +42,7 @@ Future<Result<void, FormbricksError>> setUserId(
       'Different userId is being set, cleaning up previous user state',
     );
     // Drop anything queued for the previous identity so it can't be adopted by
-    // the new user. Diverges from RN, which leaves the buffer intact.
+    // the new user.
     q.clear();
     await tearDown(config: cfg);
   }
@@ -63,7 +62,7 @@ Future<Result<void, FormbricksError>> logout({
 }) async {
   Logger.debug('Logging out and cleaning user state');
   // Drop any queued update so a debounced flush can't re-identify the user
-  // after logout. Diverges from RN, which leaves the buffer intact.
+  // after logout.
   (queue ?? UpdateQueue.instance).clear();
   await tearDown(config: config ?? FormbricksConfig.instance);
   return const Result.ok(null);

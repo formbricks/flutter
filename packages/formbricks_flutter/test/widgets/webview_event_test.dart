@@ -37,7 +37,7 @@ void main() {
       expect((event as ConsoleEvent).log, contains('hello'));
     });
 
-    test('a multi-flag payload fires multiple events in RN order', () {
+    test('a multi-flag payload fires multiple events in declaration order', () {
       final events =
           parseWebViewEvents('{"onResponseCreated":true,"onClose":true}');
       expect(events.length, 2);

@@ -13,11 +13,10 @@ import 'time.dart';
 
 /// A single, lifecycle-aware expiry ticker.
 ///
-/// Replaces the RN SDK's two separate 60s tickers (workspace + user) with one
-/// `Timer.periodic` that checks both. It is also lifecycle-aware: it cancels the
-/// timer while the app is backgrounded and runs an immediate check the moment
-/// the app resumes — RN ran its tickers regardless of app state, wasting battery
-/// and racing storage on resume.
+/// A single `Timer.periodic` checks both the workspace and user expiries. It is
+/// lifecycle-aware: it cancels the timer while the app is backgrounded and runs
+/// an immediate check the moment the app resumes, so it doesn't waste battery
+/// or race storage on resume.
 class ExpiryTicker with WidgetsBindingObserver {
   /// Creates a ticker bound to [config] and [apiClient].
   ///
@@ -75,8 +74,7 @@ class ExpiryTicker with WidgetsBindingObserver {
 
   void _scheduleTimer() {
     // Always cancel any existing timer first, so a resume can never leave two
-    // periodic timers running (the RN dual-ticker bug this design guards
-    // against).
+    // periodic timers running.
     _timer?.cancel();
     _timer = Timer.periodic(interval, (_) => unawaited(_tick()));
   }
@@ -146,7 +144,7 @@ class ExpiryTicker with WidgetsBindingObserver {
     if (user.data.userId != null &&
         expiresAt != null &&
         isNowExpired(expiresAt)) {
-      // Mirror RN's user ticker: extend the identified user's state by 30 min.
+      // Extend the identified user's state by 30 min.
       await config.update(
         current.copyWith(
           user: user.copyWith(expiresAt: clock.now().add(_kExtension)),

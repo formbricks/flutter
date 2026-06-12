@@ -1,7 +1,6 @@
 /// Persisted SDK configuration models.
 ///
-/// These mirror the React Native SDK's `types/config.ts`. The one rule that
-/// matters: **`DateTime` lives in memory, ISO-8601 strings live on the wire and
+///  The one rule that matters: **`DateTime` lives in memory, ISO-8601 strings live on the wire and
 /// on disk**, and the conversion happens *only* inside the `fromJson` / `toJson`
 /// methods here. No `DateTime.parse` anywhere else in the codebase.
 ///
@@ -149,8 +148,7 @@ class TUserState {
   /// The user data slice.
   final TUserData data;
 
-  /// The default anonymous user state (no user id, never expires). Mirrors RN's
-  /// `DEFAULT_USER_STATE_NO_USER_ID`.
+  /// The default anonymous user state (no user id, never expires).
   static const TUserState defaultNoUserId = TUserState(
     expiresAt: null,
     data: TUserData(),

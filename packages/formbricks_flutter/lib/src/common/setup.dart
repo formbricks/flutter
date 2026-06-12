@@ -39,7 +39,7 @@ void resetSetupForTest() {
 ///
 /// Returns `Ok` on success and `Err(MissingFieldError)` for bad input. On a
 /// **first-setup** network/forbidden failure it persists the error-cooldown
-/// state and **throws** [FormbricksSetupError] (matching the RN SDK).
+/// state and **throws** [FormbricksSetupError].
 ///
 /// [httpClient], [startTicker] and [logLevel] are overrides for tests and the
 /// playground.
@@ -87,6 +87,11 @@ Future<Result<void, FormbricksError>> setup({
   final config = FormbricksConfig.instance;
   await config.init();
   final existing = config.getOrNull();
+  Logger.debug(
+    existing != null
+        ? 'Found existing configuration.'
+        : 'No existing configuration found.',
+  );
 
   // Retry only after the stored first-setup cooldown expires for this target.
   if (existing != null && existing.status.isError) {
@@ -126,21 +131,29 @@ Future<Result<void, FormbricksError>> setup({
       final result = await _syncExistingConfig(config, api, existing);
       if (result case Err()) return result;
     } else {
+      Logger.debug(
+        'No valid configuration found. Resetting config and creating new one.',
+      );
       await config.reset();
+      Logger.debug('Syncing.');
       final response = await api.getWorkspaceState();
       switch (response) {
         case Ok(:final value):
+          final filteredSurveys =
+              filterSurveys(value, TUserState.defaultNoUserId);
           await config.update(
             TConfig(
               workspaceId: workspaceId,
               appUrl: normalizedAppUrl,
               workspace: value,
               user: TUserState.defaultNoUserId,
-              filteredSurveys: filterSurveys(value, TUserState.defaultNoUserId)
-                  .map((s) => s.toJson())
-                  .toList(),
+              filteredSurveys: filteredSurveys.map((s) => s.toJson()).toList(),
               status: TStatus.success,
             ),
+          );
+          Logger.debug(
+            'Fetched ${filteredSurveys.length} surveys during sync: '
+            '${filteredSurveys.map((s) => s.id).join(', ')}',
           );
         case Err(:final error):
           await _handleErrorOnFirstSetup(
@@ -153,6 +166,7 @@ Future<Result<void, FormbricksError>> setup({
     }
 
     if (startTicker) {
+      Logger.debug('Starting expiry ticker');
       final ticker = ExpiryTicker(config: config, apiClient: api)..start();
       _ticker = ticker;
       handedToTicker = true;
@@ -215,8 +229,7 @@ Future<Result<void, FormbricksError>> _syncExistingConfig(
   return const Result.ok(null);
 }
 
-/// Persists the error-cooldown state and throws [FormbricksSetupError]. Mirrors
-/// RN's `handleErrorOnFirstSetup`.
+/// Persists the error-cooldown state and throws [FormbricksSetupError].
 Future<Never> _handleErrorOnFirstSetup(
   FormbricksConfig config,
   ApiErrorResponse error, {
@@ -254,8 +267,7 @@ Future<Never> _handleErrorOnFirstSetup(
 /// Resets user state to anonymous, refilters surveys, and persists both.
 ///
 /// Called when switching identity (`setUserId` to a different id) and on
-/// `logout`. Mirrors RN's `tearDown` (`setup.ts:366–387`). No-op when no
-/// config is loaded yet.
+/// `logout`. No-op when no config is loaded yet.
 Future<void> tearDown({FormbricksConfig? config}) async {
   final cfg = config ?? FormbricksConfig.instance;
   Logger.debug('Setting user state to default');

@@ -441,7 +441,7 @@ void main() {
       expect(_ids(result), ['legacy-empty']);
     });
 
-    test('an empty-string userId is treated as anonymous (RN falsiness)', () {
+    test('an empty-string userId is treated as anonymous', () {
       final result = filterSurveys(
         _workspace([unfiltered, filtered]),
         _user(userId: ''),

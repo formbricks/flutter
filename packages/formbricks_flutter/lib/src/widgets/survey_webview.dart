@@ -175,7 +175,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     String appUrl,
   ) {
     // Builder so the keyboard inset is read in a context that rebuilds on
-    // show/hide (RN's KeyboardAvoidingView equivalent).
+    // keyboard show/hide.
     return Builder(
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
@@ -263,7 +263,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _routeOpen = false;
 
     // Queue the close write after display/response updates so bridge events
-    // cannot overtake each other. The close refilters too (RN `onCloseSurvey`).
+    // cannot overtake each other. The close refilters too.
     _enqueueConfigOp(() async {
       final current = _config.getOrNull();
       if (current == null) return;

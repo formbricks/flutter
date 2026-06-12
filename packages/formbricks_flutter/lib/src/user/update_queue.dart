@@ -1,7 +1,6 @@
 /// Debounced user-update coalescer.
 ///
-/// Ports the RN `UpdateQueue` (`lib/user/update-queue.ts`). Rapid identity and
-/// attribute changes are merged into a single accumulator and flushed once,
+/// Rapid identity and attribute changes are merged into a single accumulator and flushed once,
 /// 500 ms after the *last* call, into one `POST /api/v2/client/{id}/user`.
 ///
 /// Ordering of the public API is provided by the [CommandQueue], not here — the
@@ -26,7 +25,7 @@ class _PendingUpdates {
   _PendingUpdates({required this.userId, this.attributes});
 
   /// The user id to apply. May be empty when only attributes were queued and no
-  /// userId is resolvable yet (mirrors RN's `?? ""` fallback).
+  /// userId is resolvable yet.
   final String userId;
 
   /// The attributes to apply (numbers preserved as numbers; dates already ISO).
@@ -83,7 +82,7 @@ class UpdateQueue {
   /// Merges [attributes] into the pending updates.
   ///
   /// The effective userId is resolved from the pending updates first, then from
-  /// the persisted config (mirrors `update-queue.ts:40`). Later keys win.
+  /// the persisted config. Later keys win.
   void updateAttributes(Map<String, Object?> attributes) {
     final pendingUserId = _updates?.userId;
     final userId = (pendingUserId != null && pendingUserId.isNotEmpty)
@@ -141,7 +140,7 @@ class UpdateQueue {
     _updates = null;
   }
 
-  /// The debounced handler (port of `update-queue.ts:154–195`).
+  /// The debounced handler.
   Future<void> _flush() async {
     final pending = _updates;
     if (pending == null) return;
@@ -182,7 +181,7 @@ class UpdateQueue {
   }
 
   /// Writes a queued `language` straight into local config (no API call) and
-  /// strips it from [attributes] (port of `update-queue.ts:68–96`).
+  /// strips it from [attributes].
   Future<Map<String, Object?>> _handleLanguageWithoutUserId(
     Map<String, Object?> attributes,
   ) async {
@@ -202,8 +201,8 @@ class UpdateQueue {
     return Map<String, Object?>.from(attributes)..remove('language');
   }
 
-  /// Sends the batch to the backend and persists the returned state (port of
-  /// `update.ts:63–123`). No-op without a userId; no retry on failure.
+  /// Sends the batch to the backend and persists the returned state.
+  /// No-op without a userId; no retry on failure.
   Future<void> _sendUpdates(
     String? userId,
     Map<String, Object?> attributes,

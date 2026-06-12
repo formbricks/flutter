@@ -1,6 +1,4 @@
-/// Survey eligibility filtering. Ports RN's `filterSurveys` and helpers
-/// (`lib/common/utils.ts:11–143`).
-///
+/// Survey eligibility filtering.
 /// The eligible set is recomputed at every state-change point and persisted
 /// as `TConfig.filteredSurveys`; the trigger path reads only that set.
 library;
@@ -42,7 +40,7 @@ List<TSurvey> filterSurveys(
       )
       .toList();
 
-  // Like RN's `!userId`, an empty string counts as anonymous.
+  // A null or empty userId counts as anonymous.
   final userId = userData.userId;
   if (userId == null || userId.isEmpty) return _filterAnonymous(filtered);
   if (userData.segments.isEmpty) return _filterIdentifiedWithoutSegments();
@@ -56,7 +54,7 @@ List<TSurvey> filterSurveys(
       .toList();
 }
 
-/// Stage 1 — displayOption (`utils.ts:65–98`).
+/// Stage 1 — displayOption
 bool _passesDisplayOption(TSurvey survey, TUserData user) {
   switch (survey.displayOption) {
     case 'respondMultiple':
@@ -71,8 +69,8 @@ bool _passesDisplayOption(TSurvey survey, TUserData user) {
       if (user.responses.contains(survey.id)) return false;
       return user.displays.where((d) => d.surveyId == survey.id).length < limit;
     default:
-      // Diverges from RN, which throws here: exclude just this survey
-      // instead of killing the whole filter run.
+      // On an unknown/missing displayOption, exclude just this survey instead
+      // of letting a malformed entry kill the whole filter run.
       Logger.debug(
         'Excluding survey "${survey.id}" with unknown displayOption '
         '"${survey.displayOption}"',
@@ -81,7 +79,7 @@ bool _passesDisplayOption(TSurvey survey, TUserData user) {
   }
 }
 
-/// Stage 2 — recontactDays (`utils.ts:101–126`).
+/// Stage 2 — recontactDays
 bool _passesRecontactDays(
   TSurvey survey,
   TUserData user,
@@ -107,11 +105,10 @@ bool _passesRecontactDays(
   return true;
 }
 
-/// Stage 3a — anonymous (`utils.ts:128–133`): segment-filtered surveys are
-/// hidden.
+/// Stage 3a — anonymous: segment-filtered surveys are hidden.
 List<TSurvey> _filterAnonymous(List<TSurvey> surveys) =>
     surveys.where((survey) => !surveyHasSegmentFilters(survey)).toList();
 
-/// Stage 3b — identified with no matched segments (`utils.ts:135–137`):
+/// Stage 3b — identified with no matched segments:
 /// nothing is eligible.
 List<TSurvey> _filterIdentifiedWithoutSegments() => const [];

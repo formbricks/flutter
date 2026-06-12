@@ -1,7 +1,6 @@
 /// A Rust-style result type: either an [Ok] value or an [Err] error.
 ///
-/// Ported from the React Native SDK's `Result<T, E>` (`types/error.ts`). Using a
-/// `sealed` class lets callers `switch` exhaustively without a `default` arm:
+/// A `sealed` class lets callers `switch` exhaustively without a `default` arm:
 ///
 /// ```dart
 /// switch (result) {
