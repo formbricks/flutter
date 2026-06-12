@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks_flutter/src/common/config.dart';
@@ -10,7 +11,12 @@ import 'package:formbricks_flutter/src/types/errors.dart';
 import 'package:formbricks_flutter/src/types/survey.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Map<String, dynamic> _surveyJson(String id, List<String> actionNames) => {
+Map<String, dynamic> _surveyJson(
+  String id,
+  List<String> actionNames, {
+  num? displayPercentage,
+}) =>
+    {
       'id': id,
       'triggers': [
         for (final name in actionNames)
@@ -19,10 +25,13 @@ Map<String, dynamic> _surveyJson(String id, List<String> actionNames) => {
           },
       ],
       'languages': <dynamic>[],
+      if (displayPercentage != null) 'displayPercentage': displayPercentage,
     };
 
+/// Builds a persisted config. [filteredSurveys] defaults to [surveys].
 String _configJson({
   List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>>? filteredSurveys,
   List<Map<String, dynamic>> actionClasses = const [],
   String appUrl = 'https://app.formbricks.com',
 }) =>
@@ -38,8 +47,25 @@ String _configJson({
         },
       },
       'user': {'expiresAt': null, 'data': <String, dynamic>{}},
+      'filteredSurveys': filteredSurveys ?? surveys,
       'status': {'value': 'success', 'expiresAt': null},
     });
+
+/// A deterministic RNG: every [nextDouble] returns [value].
+class _FixedRandom implements Random {
+  _FixedRandom(this.value);
+
+  final double value;
+
+  @override
+  double nextDouble() => value;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => false;
+}
 
 Future<FormbricksConfig> _seed(String json) async {
   SharedPreferences.setMockInitialValues({FormbricksConfig.storageKey: json});
@@ -219,33 +245,112 @@ void main() {
 
     test('a malformed survey entry is skipped; valid ones still match',
         () async {
-      final json = jsonEncode({
-        'workspaceId': 'wsp_1',
-        'appUrl': 'https://app.formbricks.com',
-        'workspace': {
-          'expiresAt': '2100-01-01T00:00:00.000',
-          'data': {
-            'surveys': [
-              {'noId': true, 'triggers': <dynamic>[]},
-              _surveyJson('good', ['Target']),
-            ],
-            'actionClasses': <dynamic>[],
-            'settings': <String, dynamic>{},
-          },
-        },
-        'user': {'expiresAt': null, 'data': <String, dynamic>{}},
-        'status': {'value': 'success', 'expiresAt': null},
-      });
-      final config = await _seed(json);
+      final config = await _seed(
+        _configJson(
+          filteredSurveys: [
+            {'noId': true, 'triggers': <dynamic>[]},
+            _surveyJson('good', ['Target']),
+          ],
+        ),
+      );
       final result = await trackAction('Target', config: config);
       expect(result.isOk, isTrue);
       expect(SurveyStore.instance.survey?.id, 'good');
+    });
+
+    test('reads filteredSurveys — a raw workspace survey is not triggered',
+        () async {
+      final config = await _seed(
+        _configJson(
+          surveys: [
+            _surveyJson('ineligible', ['Target']),
+          ],
+          filteredSurveys: const [],
+        ),
+      );
+      final result = await trackAction('Target', config: config);
+      expect(result.isOk, isTrue);
+      expect(SurveyStore.instance.survey, isNull);
+    });
+
+    test('a filtered survey triggers even when absent from workspace surveys',
+        () async {
+      final config = await _seed(
+        _configJson(
+          surveys: const [],
+          filteredSurveys: [
+            _surveyJson('eligible', ['Target']),
+          ],
+        ),
+      );
+      final result = await trackAction('Target', config: config);
+      expect(result.isOk, isTrue);
+      expect(SurveyStore.instance.survey?.id, 'eligible');
+    });
+
+    test('threads the injected RNG into the percentage gate', () async {
+      final config = await _seed(
+        _configJson(
+          filteredSurveys: [
+            _surveyJson('s1', ['Target'], displayPercentage: 50),
+          ],
+        ),
+      );
+
+      var result = await trackAction(
+        'Target',
+        config: config,
+        random: _FixedRandom(0.75),
+      );
+      expect(result.isOk, isTrue);
+      expect(SurveyStore.instance.survey, isNull, reason: '75 ≥ 50 → skipped');
+
+      result = await trackAction(
+        'Target',
+        config: config,
+        random: _FixedRandom(0.25),
+      );
+      expect(result.isOk, isTrue);
+      expect(SurveyStore.instance.survey?.id, 's1', reason: '25 < 50 → shown');
     });
   });
 
   group('triggerSurvey', () {
     test('sets the survey without a percentage gate', () {
       triggerSurvey(TSurvey.fromJson({'id': 'x'}));
+      expect(SurveyStore.instance.survey?.id, 'x');
+    });
+
+    test('a roll below the displayPercentage sets the survey', () {
+      triggerSurvey(
+        TSurvey.fromJson({'id': 'x', 'displayPercentage': 50}),
+        random: _FixedRandom(0.25),
+      );
+      expect(SurveyStore.instance.survey?.id, 'x');
+    });
+
+    test('a roll at/above the displayPercentage skips the survey', () {
+      triggerSurvey(
+        TSurvey.fromJson({'id': 'x', 'displayPercentage': 50}),
+        random: _FixedRandom(0.5),
+      );
+      expect(SurveyStore.instance.survey, isNull);
+    });
+
+    test('a displayPercentage of 0 bypasses the gate entirely', () {
+      triggerSurvey(
+        TSurvey.fromJson({'id': 'x', 'displayPercentage': 0}),
+        // A 0-roll would fail `0 < 0` if the gate ran.
+        random: _FixedRandom(0),
+      );
+      expect(SurveyStore.instance.survey?.id, 'x');
+    });
+
+    test('a null displayPercentage always sets the survey', () {
+      triggerSurvey(
+        TSurvey.fromJson({'id': 'x'}),
+        random: _FixedRandom(0.999),
+      );
       expect(SurveyStore.instance.survey?.id, 'x');
     });
   });

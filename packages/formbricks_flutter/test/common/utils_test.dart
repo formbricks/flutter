@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks_flutter/src/common/utils.dart';
 import 'package:formbricks_flutter/src/types/survey.dart';
@@ -11,6 +13,22 @@ TSurvey _survey(
       'languages': languages,
       if (styling != null) 'styling': styling,
     });
+
+/// A deterministic RNG: every [nextDouble] returns [value].
+class _FixedRandom implements Random {
+  _FixedRandom(this.value);
+
+  final double value;
+
+  @override
+  double nextDouble() => value;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => false;
+}
 
 void main() {
   final langs = [
@@ -150,6 +168,53 @@ void main() {
 
     test('missing workspace styling → empty map', () {
       expect(getStyling(const {}, _survey(const [])), <String, dynamic>{});
+    });
+  });
+
+  group('shouldDisplayBasedOnPercentage', () {
+    test('a 0.0 roll shows for any positive percentage', () {
+      expect(
+        shouldDisplayBasedOnPercentage(0.01, random: _FixedRandom(0)),
+        isTrue,
+      );
+      expect(
+        shouldDisplayBasedOnPercentage(100, random: _FixedRandom(0)),
+        isTrue,
+      );
+    });
+
+    test('a 0.999 roll shows only for percentages above 99.9', () {
+      expect(
+        shouldDisplayBasedOnPercentage(99, random: _FixedRandom(0.999)),
+        isFalse,
+      );
+      expect(
+        shouldDisplayBasedOnPercentage(99.95, random: _FixedRandom(0.999)),
+        isTrue,
+      );
+    });
+
+    test('a roll equal to the percentage does not show (strict <)', () {
+      // 0.5 and 0.25 are binary-exact, so the comparison has no FP noise.
+      expect(
+        shouldDisplayBasedOnPercentage(50, random: _FixedRandom(0.5)),
+        isFalse,
+      );
+      expect(
+        shouldDisplayBasedOnPercentage(50, random: _FixedRandom(0.25)),
+        isTrue,
+      );
+    });
+
+    test('a 0 percentage never shows', () {
+      expect(
+        shouldDisplayBasedOnPercentage(0, random: _FixedRandom(0)),
+        isFalse,
+      );
+    });
+
+    test('falls back to the shared RNG when none is injected', () {
+      expect(shouldDisplayBasedOnPercentage(50), isA<bool>());
     });
   });
 }

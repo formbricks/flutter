@@ -333,7 +333,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   ),
                 ],
                 const Divider(height: 40),
-
                 for (final a in identityActions) ...[
                   FilledButton.tonal(
                     onPressed: _connected

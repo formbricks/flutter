@@ -40,22 +40,28 @@ const _stub = Key('stub-webview');
 Future<void> _seedConfig({
   String? language,
   Map<String, dynamic> settings = const {},
+  List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>> filteredSurveys = const [],
+  bool omitWorkspace = false,
 }) async {
   final json = jsonEncode({
     'workspaceId': 'wsp_1',
     'appUrl': 'https://app.formbricks.com',
-    'workspace': {
-      'expiresAt': '2100-01-01T00:00:00.000',
-      'data': {
-        'surveys': <dynamic>[],
-        'actionClasses': <dynamic>[],
-        'settings': settings,
-      },
-    },
+    'workspace': omitWorkspace
+        ? null
+        : {
+            'expiresAt': '2100-01-01T00:00:00.000',
+            'data': {
+              'surveys': surveys,
+              'actionClasses': <dynamic>[],
+              'settings': settings,
+            },
+          },
     'user': {
       'expiresAt': null,
       'data': {if (language != null) 'language': language},
     },
+    'filteredSurveys': filteredSurveys,
     'status': {'value': 'success', 'expiresAt': null},
   });
   SharedPreferences.setMockInitialValues({FormbricksConfig.storageKey: json});
@@ -274,6 +280,126 @@ void main() {
 
     expect(FormbricksConfig.instance.get().user.data.responses, ['s1']);
     expect(storedData!['responses'], ['s1']); // persisted to disk
+  });
+
+  testWidgets('DisplayCreatedEvent refilters — a displayOnce survey drops out',
+      (tester) async {
+    final surveyJson = {
+      'id': 's1',
+      'displayOption': 'displayOnce',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+    };
+    await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
+    final host = await _present(tester, _survey(surveyJson));
+
+    await tester.runAsync(() async {
+      host.onEvent!(const DisplayCreatedEvent());
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        return (data['displays'] as List?)?.isNotEmpty ?? false;
+      });
+    });
+
+    expect(
+      FormbricksConfig.instance.get().filteredSurveys,
+      isEmpty,
+      reason: 'the just-displayed displayOnce survey must leave the '
+          'eligible set immediately',
+    );
+  });
+
+  testWidgets(
+      'ResponseCreatedEvent refilters — a displayMultiple survey drops out',
+      (tester) async {
+    final surveyJson = {
+      'id': 's1',
+      'displayOption': 'displayMultiple',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+    };
+    await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
+    final host = await _present(tester, _survey(surveyJson));
+
+    await tester.runAsync(() async {
+      host.onEvent!(const ResponseCreatedEvent());
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        return (data['responses'] as List?)?.isNotEmpty ?? false;
+      });
+    });
+
+    expect(
+      FormbricksConfig.instance.get().filteredSurveys,
+      isEmpty,
+      reason: 'the just-answered displayMultiple survey must leave the '
+          'eligible set immediately',
+    );
+  });
+
+  testWidgets('DisplayCreatedEvent refilter keeps still-eligible surveys',
+      (tester) async {
+    final shown = {
+      'id': 's1',
+      'displayOption': 'displayOnce',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+    };
+    final keeper = {
+      'id': 'keeper',
+      'displayOption': 'respondMultiple',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+    };
+    await _seedConfig(
+      surveys: [shown, keeper],
+      filteredSurveys: [shown, keeper],
+    );
+    final host = await _present(tester, _survey(shown));
+
+    await tester.runAsync(() async {
+      host.onEvent!(const DisplayCreatedEvent());
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        return (data['displays'] as List?)?.isNotEmpty ?? false;
+      });
+    });
+
+    expect(
+      FormbricksConfig.instance
+          .get()
+          .filteredSurveys
+          .map((e) => (e as Map)['id'])
+          .toList(),
+      ['keeper'],
+      reason: 'only the just-displayed displayOnce survey drops out',
+    );
+  });
+
+  testWidgets(
+      'DisplayCreatedEvent without a workspace empties filteredSurveys '
+      'without throwing', (tester) async {
+    final surveyJson = {
+      'id': 's1',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+    };
+    await _seedConfig(
+      omitWorkspace: true,
+      filteredSurveys: [surveyJson],
+    );
+    final host = await _present(tester, _survey(surveyJson));
+
+    await tester.runAsync(() async {
+      host.onEvent!(const DisplayCreatedEvent());
+      await _waitUntil(() async {
+        final data = await _storedUserData();
+        return (data['displays'] as List?)?.isNotEmpty ?? false;
+      });
+    });
+
+    expect(FormbricksConfig.instance.get().filteredSurveys, isEmpty);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('OpenExternalUrlEvent launches via the injected launcher',

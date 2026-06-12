@@ -1,14 +1,17 @@
-/// Tracks code actions against cached workspace surveys.
+/// Tracks code actions against the filtered survey set.
 ///
-/// This layer only matches action classes and leaves eligibility filtering to
-/// the survey selection pipeline.
+/// Matches action classes against `config.filteredSurveys` and applies the
+/// per-display `displayPercentage` roll.
 library;
+
+import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../common/config.dart';
 import '../common/logger.dart';
 import '../common/result.dart';
+import '../common/utils.dart';
 import '../types/action_class.dart';
 import '../types/errors.dart';
 import '../types/survey.dart';
@@ -22,32 +25,46 @@ Future<bool> _defaultIsConnected() async {
   return results.any((r) => r != ConnectivityResult.none);
 }
 
-/// Marks [survey] for display.
-void triggerSurvey(TSurvey survey, {SurveyStore? store}) =>
-    (store ?? SurveyStore.instance).setSurvey(survey);
+/// Marks [survey] for display unless the `displayPercentage` roll skips it.
+/// [random] is the test seam.
+void triggerSurvey(TSurvey survey, {SurveyStore? store, Random? random}) {
+  final displayPercentage = survey.displayPercentage;
+  if (displayPercentage != null && displayPercentage > 0) {
+    final shouldDisplay =
+        shouldDisplayBasedOnPercentage(displayPercentage, random: random);
+    if (!shouldDisplay) {
+      Logger.debug(
+        'Survey display of "${survey.id}" skipped based on displayPercentage.',
+      );
+      return;
+    }
+  }
+  (store ?? SurveyStore.instance).setSurvey(survey);
+}
 
-/// Triggers cached surveys whose action-class name matches [name].
+/// Triggers filtered surveys whose action-class name matches [name].
 Future<Result<void, FormbricksError>> trackAction(
   String name, {
   String? alias,
   FormbricksConfig? config,
   SurveyStore? store,
+  Random? random,
 }) async {
   final cfg = (config ?? FormbricksConfig.instance).get();
   Logger.debug('Formbricks: Action "${alias ?? name}" tracked');
 
-  final rawSurveys = cfg.workspace?.data.surveys ?? const [];
-  if (rawSurveys.isEmpty) {
+  final activeSurveys = cfg.filteredSurveys;
+  if (activeSurveys.isEmpty) {
     Logger.debug('No active surveys to display');
     return const Result.ok(null);
   }
 
-  for (final entry in rawSurveys) {
-    final survey = _tryParseSurvey(entry);
+  for (final entry in activeSurveys) {
+    final survey = tryParseSurvey(entry, source: 'filtered surveys');
     if (survey == null) continue;
     for (final trigger in survey.triggers) {
       if (trigger.actionClass.name == name) {
-        triggerSurvey(survey, store: store);
+        triggerSurvey(survey, store: store, random: random);
       }
     }
   }
@@ -114,15 +131,6 @@ Future<Result<void, FormbricksError>> track(
     return Result.err(
       InternalError(operation: 'track', cause: e, stackTrace: stackTrace),
     );
-  }
-}
-
-TSurvey? _tryParseSurvey(Object? entry) {
-  try {
-    return TSurvey.fromJson((entry as Map).cast<String, dynamic>());
-  } catch (e) {
-    Logger.error('Skipping malformed survey in workspace state: $e');
-    return null;
   }
 }
 

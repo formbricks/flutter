@@ -1,5 +1,5 @@
 /// Stable error codes used across the SDK. The [wire] value matches the string
-/// the backend and the React Native SDK use, so logs and tests stay comparable.
+/// the backend uses, so logs and tests stay comparable.
 enum FormbricksErrorCode {
   /// A required input field was missing or empty.
   missingField('missing_field'),
@@ -116,7 +116,7 @@ final class InternalError extends FormbricksError {
 }
 
 /// Thrown when the very first [setup] attempt fails and the SDK is placed into
-/// the error-cooldown state. Mirrors the RN SDK throwing on first-setup failure.
+/// the error-cooldown state.
 final class FormbricksSetupError extends FormbricksError {
   /// Creates a setup error. Carries the underlying [code] (network/forbidden).
   FormbricksSetupError({

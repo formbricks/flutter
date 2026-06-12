@@ -9,7 +9,7 @@ import 'time.dart';
 
 /// Persistent SDK config, backed by [SharedPreferences] under [storageKey].
 ///
-/// Design choices (improvements over the RN `RNConfig`):
+/// Design choices:
 /// - **Init once.** [init] reads storage a single time during `setup()`; after
 ///   that [get] is synchronous and does not re-read the disk.
 /// - **Awaited persistence.** [update] completes only after the disk write, so a
@@ -24,8 +24,8 @@ class FormbricksConfig {
   /// The process-wide config singleton.
   static FormbricksConfig get instance => _instance ??= FormbricksConfig._();
 
-  /// SharedPreferences key. Distinct from RN's `formbricks-react-native` so the
-  /// two SDKs never collide on one device.
+  /// SharedPreferences key, namespaced to this SDK so multiple Formbricks SDKs
+  /// on one device never collide on storage.
   static const String storageKey = 'formbricks-flutter';
 
   TConfig? _config;
@@ -33,8 +33,8 @@ class FormbricksConfig {
 
   /// Loads and parses the cached config exactly once.
   ///
-  /// A cached config whose **workspace** has expired is discarded (matches RN's
-  /// `loadFromStorage`). An error-only config (no workspace) is kept so the
+  /// A cached config whose **workspace** has expired is discarded. An error-only
+  /// config (no workspace) is kept so the
   /// error cooldown survives a reload.
   Future<void> init() async {
     final prefs = _prefs ??= await SharedPreferences.getInstance();

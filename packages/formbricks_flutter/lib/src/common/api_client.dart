@@ -9,9 +9,8 @@ import 'result.dart';
 
 /// Thin wrapper over `package:http` for the two client endpoints the SDK needs.
 ///
-/// Ported from the RN `ApiClient` / `makeRequest` (`lib/common/api.ts`). The
-/// `http.Client` is injectable so tests can swap in a mock; no `dio`, to keep
-/// the dependency graph minimal.
+/// The `http.Client` is injectable so tests can swap in a mock; no `dio`, to
+/// keep the dependency graph minimal.
 class ApiClient {
   /// Creates an API client for [appUrl] / [workspaceId].
   ApiClient({
@@ -128,10 +127,9 @@ class ApiClient {
   }
 
   /// Fetches workspace state via `GET /api/v2/client/{workspaceId}/environment`.
-  ///
   /// Normalizes the legacy field name: the server may return the settings object
   /// under `data.settings` (new), `data.workspace`, or legacy `data.project`.
-  /// All three are mapped to `data.settings` (port of `workspace/state.ts`).
+  /// All three are mapped to `data.settings`.
   Future<Result<TWorkspaceState, ApiErrorResponse>> getWorkspaceState() {
     return _request<TWorkspaceState>(
       method: 'GET',

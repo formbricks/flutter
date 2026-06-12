@@ -18,18 +18,23 @@ String _configJson({
   String? userId,
   String? language,
   bool omitWorkspaceId = false,
+  bool omitWorkspace = false,
+  List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>> filteredSurveys = const [],
 }) =>
     jsonEncode({
       'workspaceId': omitWorkspaceId ? null : _workspaceId,
       'appUrl': _appUrl,
-      'workspace': {
-        'expiresAt': '2100-01-01T00:00:00.000',
-        'data': {
-          'surveys': <dynamic>[],
-          'actionClasses': <dynamic>[],
-          'settings': <String, dynamic>{},
-        },
-      },
+      'workspace': omitWorkspace
+          ? null
+          : {
+              'expiresAt': '2100-01-01T00:00:00.000',
+              'data': {
+                'surveys': surveys,
+                'actionClasses': <dynamic>[],
+                'settings': <String, dynamic>{},
+              },
+            },
       'user': {
         'expiresAt': null,
         'data': {
@@ -37,6 +42,7 @@ String _configJson({
           if (language != null) 'language': language,
         },
       },
+      'filteredSurveys': filteredSurveys,
       'status': {'value': 'success', 'expiresAt': null},
     });
 
@@ -44,12 +50,18 @@ Future<FormbricksConfig> _seed({
   String? userId,
   String? language,
   bool omitWorkspaceId = false,
+  bool omitWorkspace = false,
+  List<Map<String, dynamic>> surveys = const [],
+  List<Map<String, dynamic>> filteredSurveys = const [],
 }) async {
   SharedPreferences.setMockInitialValues({
     FormbricksConfig.storageKey: _configJson(
       userId: userId,
       language: language,
       omitWorkspaceId: omitWorkspaceId,
+      omitWorkspace: omitWorkspace,
+      surveys: surveys,
+      filteredSurveys: filteredSurveys,
     ),
   });
   FormbricksConfig.resetInstance();
@@ -58,15 +70,32 @@ Future<FormbricksConfig> _seed({
   return config;
 }
 
+Map<String, dynamic> _surveyJson(
+  String id, {
+  Map<String, dynamic>? segment,
+}) =>
+    {
+      'id': id,
+      'displayOption': 'respondMultiple',
+      'triggers': <dynamic>[],
+      'languages': <dynamic>[],
+      if (segment != null) 'segment': segment,
+    };
+
 /// A user-state response body that echoes [userId].
-String _userResponse(String userId, {List<String>? errors}) => jsonEncode({
+String _userResponse(
+  String userId, {
+  List<String>? errors,
+  List<String> segments = const [],
+}) =>
+    jsonEncode({
       'data': {
         'state': {
           'expiresAt': null,
           'data': {
             'userId': userId,
             'contactId': 'c1',
-            'segments': <dynamic>[],
+            'segments': segments,
             'displays': <dynamic>[],
             'responses': <dynamic>[],
             'lastDisplayAt': null,
@@ -337,6 +366,102 @@ void main() {
       // State persisted from the response (contactId came back as c1).
       expect(config.get().user.data.contactId, 'c1');
       expect(queue.isEmpty, isTrue);
+    });
+  });
+
+  test('successful flush refilters surveys against the synced user', () async {
+    final config = await _seed(
+      userId: 'u1',
+      surveys: [
+        _surveyJson('gated', segment: {'id': 'seg_a', 'hasFilters': true}),
+        _surveyJson('plain'),
+      ],
+    );
+    final api = ApiClient(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      client: MockClient(
+        (req) async =>
+            http.Response(_userResponse('u1', segments: ['seg_a']), 200),
+      ),
+    );
+    final queue = UpdateQueue.instance
+      ..configOverride = config
+      ..apiClientOverride = api;
+
+    fakeAsync((async) {
+      queue
+        ..updateAttributes({'plan': 'pro'})
+        ..processUpdates();
+      async.elapse(const Duration(milliseconds: 500));
+
+      expect(
+        config.get().filteredSurveys.map((e) => (e as Map)['id']).toList(),
+        ['gated'],
+        reason: 'only the segment-matched survey survives for the synced user',
+      );
+    });
+  });
+
+  test('a synced user with no matched segments empties filteredSurveys',
+      () async {
+    final config = await _seed(
+      userId: 'u1',
+      surveys: [_surveyJson('plain')],
+      // Stale eligible set from before the sync.
+      filteredSurveys: [_surveyJson('plain')],
+    );
+    final api = ApiClient(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      client: MockClient(
+        (req) async => http.Response(_userResponse('u1'), 200),
+      ),
+    );
+    final queue = UpdateQueue.instance
+      ..configOverride = config
+      ..apiClientOverride = api;
+
+    fakeAsync((async) {
+      queue
+        ..updateAttributes({'plan': 'pro'})
+        ..processUpdates();
+      async.elapse(const Duration(milliseconds: 500));
+
+      expect(config.get().filteredSurveys, isEmpty);
+    });
+  });
+
+  test('a flush against a workspace-less config still persists the user',
+      () async {
+    final config = await _seed(
+      userId: 'u1',
+      omitWorkspace: true,
+      filteredSurveys: [_surveyJson('stale')],
+    );
+    final api = ApiClient(
+      appUrl: _appUrl,
+      workspaceId: _workspaceId,
+      client: MockClient(
+        (req) async => http.Response(_userResponse('u1'), 200),
+      ),
+    );
+    final queue = UpdateQueue.instance
+      ..configOverride = config
+      ..apiClientOverride = api;
+
+    fakeAsync((async) {
+      queue
+        ..updateAttributes({'plan': 'pro'})
+        ..processUpdates();
+      async.elapse(const Duration(milliseconds: 500));
+
+      expect(config.get().user.data.contactId, 'c1', reason: 'state synced');
+      expect(
+        config.get().filteredSurveys,
+        isEmpty,
+        reason: 'no workspace → nothing can be eligible',
+      );
     });
   });
 

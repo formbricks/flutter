@@ -12,6 +12,7 @@ import 'package:clock/clock.dart';
 import 'package:flutter/widgets.dart';
 
 import '../common/config.dart';
+import '../common/filter_surveys.dart';
 import '../common/logger.dart';
 import '../common/utils.dart';
 import '../survey/survey_store.dart';
@@ -174,7 +175,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     String appUrl,
   ) {
     // Builder so the keyboard inset is read in a context that rebuilds on
-    // show/hide (RN's KeyboardAvoidingView equivalent).
+    // keyboard show/hide.
     return Builder(
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
@@ -220,15 +221,14 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       ...current.user.data.displays,
       TDisplay(surveyId: widget.survey.id, createdAt: now),
     ];
-    await _config.update(
-      current.copyWith(
-        user: current.user.copyWith(
-          data: current.user.data.copyWith(
-            displays: displays,
-            lastDisplayAt: now,
-          ),
-        ),
+    final user = current.user.copyWith(
+      data: current.user.data.copyWith(
+        displays: displays,
+        lastDisplayAt: now,
       ),
+    );
+    await _config.update(
+      current.copyWith(user: user, filteredSurveys: _refilter(current, user)),
     );
   }
 
@@ -236,13 +236,20 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     final current = _config.getOrNull();
     if (current == null) return;
     final responses = [...current.user.data.responses, widget.survey.id];
-    await _config.update(
-      current.copyWith(
-        user: current.user.copyWith(
-          data: current.user.data.copyWith(responses: responses),
-        ),
-      ),
+    final user = current.user.copyWith(
+      data: current.user.data.copyWith(responses: responses),
     );
+    await _config.update(
+      current.copyWith(user: user, filteredSurveys: _refilter(current, user)),
+    );
+  }
+
+  /// Refilters the eligible set against the just-updated [user], so e.g. a
+  /// shown `displayOnce` survey stops triggering immediately.
+  List<dynamic> _refilter(TConfig config, TUserState user) {
+    final workspace = config.workspace;
+    if (workspace == null) return const [];
+    return filterSurveys(workspace, user).map((s) => s.toJson()).toList();
   }
 
   void _closeSurvey({bool alreadyDismissed = false}) {
@@ -256,10 +263,13 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _routeOpen = false;
 
     // Queue the close write after display/response updates so bridge events
-    // cannot overtake each other.
+    // cannot overtake each other. The close refilters too.
     _enqueueConfigOp(() async {
       final current = _config.getOrNull();
-      if (current != null) await _config.update(current);
+      if (current == null) return;
+      await _config.update(
+        current.copyWith(filteredSurveys: _refilter(current, current.user)),
+      );
     });
 
     _store.resetSurvey();

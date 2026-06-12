@@ -14,8 +14,8 @@ enum LogLevel {
 
 /// Static logging facade over a hidden singleton.
 ///
-/// Mirrors the RN SDK's `Logger` (same `🧱 Formbricks - <ts> [LEVEL] - msg`
-/// format) but is configured once in `setup()` for deterministic behavior.
+/// Emits `🧱 Formbricks - <ts> [LEVEL] - msg` lines and is configured once in
+/// `setup()` for deterministic behavior.
 /// Routes through `dart:developer`'s `log()` rather than `print()` (the
 /// `avoid_print` lint is on) and never logs attribute values or other PII.
 class Logger {

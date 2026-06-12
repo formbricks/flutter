@@ -1,7 +1,30 @@
 /// Survey rendering helpers.
 library;
 
+import 'dart:math';
+
 import '../types/survey.dart';
+import 'logger.dart';
+
+/// Parses a raw survey entry, returning null (and logging [source]) when
+/// malformed.
+TSurvey? tryParseSurvey(Object? entry, {required String source}) {
+  try {
+    return TSurvey.fromJson((entry as Map).cast<String, dynamic>());
+  } catch (e) {
+    Logger.error('Skipping malformed survey in $source: $e');
+    return null;
+  }
+}
+
+/// Shared RNG for the display-percentage roll (not a security context, so
+/// plain [Random] over `Random.secure()`).
+final Random _sharedRandom = Random();
+
+/// Rolls whether a survey should display given its [displayPercentage]
+/// (0–100). [random] is the test seam.
+bool shouldDisplayBasedOnPercentage(num displayPercentage, {Random? random}) =>
+    (random ?? _sharedRandom).nextDouble() * 100 < displayPercentage;
 
 /// Returns the code of the survey's default language, or null when none is
 /// marked default.

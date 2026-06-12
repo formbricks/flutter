@@ -10,9 +10,8 @@ typedef _Runner = Future<void> Function();
 ///
 /// Every public SDK method routes through this so calls execute in strict
 /// submission order — `setUserId` followed by `setAttribute` can't race, because
-/// the attribute call needs the userId already applied. Ported from the RN
-/// `CommandQueue`, with one difference: each [add] returns its own `Future<T>`
-/// instead of a shared `wait()`.
+/// the attribute call needs the userId already applied. Each [add] returns its
+/// own `Future<T>`.
 class CommandQueue {
   /// Creates a queue. [isSetup] reports whether `setup()` has completed; it is
   /// injected so the queue stays decoupled from the setup module (and testable).
