@@ -4,10 +4,10 @@ Demo / manual-QA app for the [`formbricks_flutter`](../../packages/formbricks_fl
 SDK. Targets iOS + Android.
 
 It calls `Formbricks.setup` on launch (reading `APP_URL` / `WORKSPACE_ID` from
-`--dart-define`, mirroring the React Native playground's env vars) and shows the
-setup status. The six SDK-test buttons (track / setUserId / setAttributes ×2 /
-setLanguage / logout) are inert stubs until the rest of the API lands; each shows
-a "not wired to the SDK yet" snackbar.
+`--dart-define`) and shows the connection status. Once connected, use the
+"Trigger Code Action" button and the identity buttons (setUserId / setAttributes
+/ setAttribute / setLanguage / logout) to drive the SDK against a real workspace;
+the local-storage buttons inspect and clear the persisted config.
 
 ## Run
 
