@@ -2,9 +2,8 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "*.*.*"
+  release:
+    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -60,14 +59,8 @@ jobs:
         run: make pub-publish-dry-run
 
       - name: Publish to pub.dev
-        if: github.event_name == 'push' && github.ref_type == 'tag'
-        env:
-          PUB_PUBLISH_ENABLED: ${{ vars.PUB_PUBLISH_ENABLED }}
+        if: github.event_name == 'release'
         run: |
-          # Fail-safe: publishing is irreversible, so it's gated on PUB_PUBLISH_ENABLED.
-          # First resolve the pub.dev name (taken; latest 0.0.7), bump version, drop publish_to: none.
-          if [ "$PUB_PUBLISH_ENABLED" != "true" ]; then
-            echo "::notice::Publish skipped — set repository variable PUB_PUBLISH_ENABLED=true to enable (see prerequisites in release.yml)."
-            exit 0
-          fi
+          # Prereqs: the release's tag matches the pubspec version, and pub.dev
+          # automated publishing is configured to trust this repo + workflow.
           make pub-publish-force
