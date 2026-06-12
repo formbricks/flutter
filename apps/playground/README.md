@@ -1,6 +1,6 @@
 # Playground
 
-Demo / manual-QA app for the [`formbricks_flutter`](../../packages/formbricks_flutter)
+Demo / manual-QA app for the [`formbricks`](../../packages/formbricks)
 SDK. Targets iOS + Android.
 
 It calls `Formbricks.setup` on launch (reading `APP_URL` / `WORKSPACE_ID` from

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:formbricks_flutter/formbricks_flutter.dart';
+import 'package:formbricks/formbricks.dart';
 
 const String _defaultAppUrl = String.fromEnvironment('APP_URL');
 const String _defaultWorkspaceId = String.fromEnvironment('WORKSPACE_ID');

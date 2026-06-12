@@ -19,7 +19,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:formbricks_flutter/formbricks_flutter.dart';
+import 'package:formbricks/formbricks.dart';
 import 'package:formbricks_playground/main.dart';
 import 'package:integration_test/integration_test.dart';
 
