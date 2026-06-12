@@ -1,13 +1,12 @@
 # Formbricks Flutter
 
 Monorepo for the first-party **Flutter SDK** for [Formbricks](https://formbricks.com)
-and its demo app. The SDK mirrors the [React Native SDK](https://github.com/formbricks/react-native):
-initialize a workspace, identify users, track actions, and render targeted in-app
-surveys inside a WebView backed by `{appUrl}/js/surveys.umd.cjs`.
+and its demo app. Initialize a workspace, identify users, track actions, and
+render targeted in-app surveys inside a WebView backed by
+`{appUrl}/js/surveys.umd.cjs`.
 
-> **Status:** repository skeleton. The SDK currently exposes only a placeholder
-> `welcome()`. The public API, survey rendering, CI, and pub.dev publishing land
-> in follow-up work — see [Roadmap](#roadmap).
+SDK usage docs live in
+[`packages/formbricks_flutter/README.md`](packages/formbricks_flutter/README.md).
 
 ## Quick Start
 
@@ -73,10 +72,11 @@ The Makefile delegates to `tool/run.sh`, boots a simulator/emulator when it can,
 then runs `apps/playground`. Once the app is running, press `r` for hot reload,
 `R` for hot restart, and `q` to quit.
 
-You should see a **"Welcome to Formbricks"** header and six SDK-test buttons
-(track / setUserId / setAttributes ×2 / setLanguage / logout). They are inert
-stubs — each shows a "not wired to the SDK yet" snackbar — until the SDK API
-lands in follow-up work.
+You should see a **"Welcome to Formbricks"** header, a connection form
+(App URL + Workspace ID), a "Trigger Code Action" button, the identity buttons
+(setUserId / setAttributes / setAttribute / setLanguage / logout), and
+local-storage inspect/clear buttons. Connect to a real workspace to exercise
+them end to end.
 
 ## Repository layout
 
@@ -91,29 +91,28 @@ flutter/
 │   └── formbricks_flutter/      # the SDK package (the thing we publish)
 │       ├── lib/
 │       │   ├── formbricks_flutter.dart   # public exports
-│       │   └── src/                       # (added in implementation tickets)
+│       │   └── src/                       # private implementation
 │       ├── test/                          # one test file per source file
 │       ├── pubspec.yaml
 │       ├── CHANGELOG.md
 │       ├── LICENSE
 │       └── README.md
 └── apps/
-    └── playground/              # demo / manual-QA app (equivalent of RN's apps/playground)
+    └── playground/              # demo / manual-QA app
         ├── lib/main.dart        # SDK test buttons: track, setUserId, setAttributes, …
-        ├── android/  ios/       # platform projects (iOS + Android only for v1)
+        ├── android/  ios/       # platform projects (iOS + Android only)
         ├── test/
         └── pubspec.yaml
 ```
 
-This mirrors the RN repo's `packages/*` + `apps/*` split, so anyone moving
-between the two SDKs finds the same shape.
+A standard `packages/*` + `apps/*` monorepo split.
 
 ### Why these locations
 
-| Path                          | Holds               | Rationale                                                                                                                                                                                                                                             |
-| ----------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/formbricks_flutter` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks_flutter.dart` re-exports the public API.                                                                                                                                |
-| `apps/playground`             | Demo app            | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. The RN SDK proved this app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
+| Path                          | Holds               | Rationale                                                                                                                                                                                                                                  |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/formbricks_flutter` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks_flutter.dart` re-exports the public API.                                                                                                                     |
+| `apps/playground`             | Demo app            | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. A real demo app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
 
 ## Monorepo tooling
 
@@ -172,18 +171,18 @@ make pub-publish-dry-run
 
 ## Conventions
 
-These are locked in for all follow-up work (full rationale in the RN repo's
-`FLUTTER_SDK_PLAN.md`):
+Conventions locked in across the SDK:
 
 - **Naming.** Internal types are `FormbricksConfig`, `Logger`, etc. — no
   redundant `Flutter` prefix inside a Flutter package. Storage key is
-  `formbricks-flutter` (distinct from RN's `formbricks-react-native`).
+  `formbricks-flutter`, namespaced so multiple Formbricks SDKs on one device
+  never collide.
 - **Static public API, hidden singleton.** `Formbricks.track(...)` /
   `Formbricks.setup(...)` are static facades over a private singleton — **not**
   `Formbricks.instance.track(...)`. The host widget and static API share the
   one `Formbricks` class.
 - **No `environmentId`.** The SDK accepts `workspaceId` only — no legacy alias
-  to ever deprecate (RN still carries that debt).
+  to ever deprecate.
 - **Dates cross one boundary.** `DateTime` in memory, ISO-8601 `String` on the
   wire and on disk; convert only in `fromJson` / `toJson`. No stray
   `DateTime.parse` elsewhere.
@@ -191,7 +190,7 @@ These are locked in for all follow-up work (full rationale in the RN repo's
   path + errors + edge cases). PRs aren't mergeable without it; aim for ≥ 80 %
   coverage on touched files. Unit tests use `flutter_test` + `mocktail` /
   `http`'s `MockClient` — no real network.
-- **Targets.** iOS + Android only for v1. A `kIsWeb` guard throws on Flutter Web.
+- **Targets.** iOS + Android only; Flutter Web and desktop are not supported.
 
 ## Toolchain details
 
@@ -260,17 +259,3 @@ fvm flutter run -d emulator      # Android, if the emulator id contains "emulato
 
 First Android build is slow because Gradle downloads the NDK and CMake
 (approximately 3 GB, one-time). Subsequent builds reuse them.
-
-## Roadmap
-
-| Stage                    | Scope                                                             |
-| ------------------------ | ----------------------------------------------------------------- |
-| Repo + monorepo skeleton | This ✅                                                           |
-| `setup` + command queue  | `setup` function, `CommandQueue`, `FormbricksConfig`, `ApiClient` |
-| Track + show survey      | `track` + survey rendering (WebView)                              |
-| CI                       | GitHub Actions (format / analyze / test / build)                  |
-| Code quality             | SonarCloud wiring + quality gate                                  |
-
-The canonical spec and the React-Native→Flutter architecture mapping live in
-[`docs/FLUTTER_SDK_PLAN.md`](docs/FLUTTER_SDK_PLAN.md). The reference RN source is
-the `formbricks/react-native` repo.
