@@ -65,7 +65,7 @@ await Formbricks.logout();
 
 All static methods are sequenced through an internal command queue, so calls
 run in submission order (a `setUserId` followed by `setAttribute` can't race).
-Each returns a `Result<void, FormbricksError>`.
+Each returns a `Future<Result<void, FormbricksError>>`.
 
 > Prefer to initialize before any UI mounts? Call `Formbricks.setup(...)`
 > directly (see below) — the widget still needs to be in the tree to render
@@ -151,12 +151,15 @@ default level is `error`. Logs never contain attribute values or other PII.
 ## Storage & privacy
 
 Config is persisted with `shared_preferences` under the key `formbricks-flutter`.
-This is **not encrypted at rest** — avoid putting sensitive PII in attribute
-values. Survey responses are submitted by the embedded WebView directly to your
-`appUrl` over HTTPS; the Dart layer never handles response content.
+This is **not encrypted at rest** — avoid putting sensitive Personally
+Identifiable Information (PII) in attribute values. Survey responses are
+submitted by the embedded WebView directly to your `appUrl` over HTTPS; the
+Dart layer never handles response content.
 
 ## Platform support
 
-iOS + Android only; Flutter Web and desktop are not supported. Loading the
-survey runtime requires `{appUrl}/js/surveys.umd.cjs` to be reachable from the
-device (the default for Formbricks Cloud and standard self-hosted setups).
+iOS + Android only; Flutter Web and desktop are not supported. Surveys render by
+loading `{appUrl}/js/surveys.umd.cjs` in a WebView, so that URL must be reachable
+from the device. Formbricks Cloud and standard self-hosted instances serve this
+script automatically — no extra setup is needed unless you host behind a
+restricted network.

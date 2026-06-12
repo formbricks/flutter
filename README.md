@@ -5,11 +5,8 @@ and its demo app. Initialize a workspace, identify users, track actions, and
 render targeted in-app surveys inside a WebView backed by
 `{appUrl}/js/surveys.umd.cjs`.
 
-> **Status:** feature-complete for v1 — setup, identify, attributes, language,
-> code-action tracking, eligibility filtering/targeting, and WebView survey
-> rendering are implemented and tested. Remaining before GA: pub.dev publish and
-> the CI integration-test gate — see [Status](#status). SDK usage docs live in
-> [`packages/formbricks_flutter/README.md`](packages/formbricks_flutter/README.md).
+SDK usage docs live in
+[`packages/formbricks_flutter/README.md`](packages/formbricks_flutter/README.md).
 
 ## Quick Start
 
@@ -103,7 +100,7 @@ flutter/
 └── apps/
     └── playground/              # demo / manual-QA app
         ├── lib/main.dart        # SDK test buttons: track, setUserId, setAttributes, …
-        ├── android/  ios/       # platform projects (iOS + Android only for v1)
+        ├── android/  ios/       # platform projects (iOS + Android only)
         ├── test/
         └── pubspec.yaml
 ```
@@ -193,7 +190,7 @@ Conventions locked in across the SDK:
   path + errors + edge cases). PRs aren't mergeable without it; aim for ≥ 80 %
   coverage on touched files. Unit tests use `flutter_test` + `mocktail` /
   `http`'s `MockClient` — no real network.
-- **Targets.** iOS + Android only for v1. A `kIsWeb` guard throws on Flutter Web.
+- **Targets.** iOS + Android only; Flutter Web and desktop are not supported.
 
 ## Toolchain details
 
@@ -262,20 +259,3 @@ fvm flutter run -d emulator      # Android, if the emulator id contains "emulato
 
 First Android build is slow because Gradle downloads the NDK and CMake
 (approximately 3 GB, one-time). Subsequent builds reuse them.
-
-## Status
-
-| Stage                                | State   |
-| ------------------------------------ | ------- |
-| Repo + monorepo skeleton             | ✅      |
-| `setup` + command queue              | ✅      |
-| Track + show survey (WebView)        | ✅      |
-| User identification + attributes     | ✅      |
-| Eligibility filtering / targeting    | ✅      |
-| CI (format / analyze / test / build) | ✅      |
-| Code quality (SonarCloud)            | ✅      |
-| pub.dev publish                      | Pending |
-
-Remaining before GA: publish to pub.dev, and add the integration-test gate
-(render → respond → verify backend) to CI on an iOS simulator and Android
-emulator.
