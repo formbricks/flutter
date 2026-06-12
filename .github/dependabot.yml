@@ -6,7 +6,7 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "pub"
-    directory: "/packages/formbricks_flutter"
+    directory: "/packages/formbricks"
     schedule:
       interval: "weekly"
 

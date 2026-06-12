@@ -1,6 +1,6 @@
 # TLS / HTTPS recommendations
 
-This guide is for **developers integrating the `formbricks_flutter` package**
+This guide is for **developers integrating the `formbricks` package**
 into their app, especially when pointing the SDK at a **self-hosted Formbricks
 instance**. It explains the SDK's TLS requirements and how to make a self-hosted
 instance load correctly.

@@ -1,0 +1,40 @@
+name: formbricks
+description: >-
+  Formbricks Flutter SDK — connect your Flutter app to Formbricks, identify
+  users, track actions, and render targeted in-app surveys.
+version: 0.0.1
+homepage: https://formbricks.com
+repository: https://github.com/formbricks/flutter
+issue_tracker: https://github.com/formbricks/flutter/issues
+
+# Not published to pub.dev yet — publish_to is disabled until the first release.
+publish_to: none
+
+# Part of the root pub workspace — shares the root lockfile + analysis config.
+resolution: workspace
+
+environment:
+  # Floor capped at Flutter 3.27 / Dart 3.6 — the lowest pub workspaces allow.
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.3.0
+  clock: ^1.1.2
+  webview_flutter: ^4.13.0
+  # Android-specific APIs are used to disable file/content access.
+  webview_flutter_android: ^4.13.0
+  url_launcher: ^6.3.0
+  connectivity_plus: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.0
+  fake_async: ^1.3.0
+
+flutter:

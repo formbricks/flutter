@@ -6,7 +6,7 @@ render targeted in-app surveys inside a WebView backed by
 `{appUrl}/js/surveys.umd.cjs`.
 
 SDK usage docs live in
-[`packages/formbricks_flutter/README.md`](packages/formbricks_flutter/README.md).
+[`packages/formbricks/README.md`](packages/formbricks/README.md).
 
 ## Quick Start
 
@@ -88,9 +88,9 @@ flutter/
 ├── sonar-project.properties     # SonarCloud config (finalised in a follow-up)
 ├── LICENSE                      # MIT
 ├── packages/
-│   └── formbricks_flutter/      # the SDK package (the thing we publish)
+│   └── formbricks/      # the SDK package (the thing we publish)
 │       ├── lib/
-│       │   ├── formbricks_flutter.dart   # public exports
+│       │   ├── formbricks.dart   # public exports
 │       │   └── src/                       # private implementation
 │       ├── test/                          # one test file per source file
 │       ├── pubspec.yaml
@@ -109,10 +109,10 @@ A standard `packages/*` + `apps/*` monorepo split.
 
 ### Why these locations
 
-| Path                          | Holds               | Rationale                                                                                                                                                                                                                                  |
-| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/formbricks_flutter` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks_flutter.dart` re-exports the public API.                                                                                                                     |
-| `apps/playground`             | Demo app            | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. A real demo app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
+| Path                  | Holds               | Rationale                                                                                                                                                                                                                                  |
+| --------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/formbricks` | The publishable SDK | Single source of the pub.dev package. `src/` is private; only `lib/formbricks.dart` re-exports the public API.                                                                                                                             |
+| `apps/playground`     | Demo app            | Real Flutter app on iOS + Android for manual QA of WebView / keyboard / modal behaviour. Excluded from SonarCloud + pub scoring. A real demo app is what catches keyboard/touch regressions before customers do, so it ships from day one. |
 
 ## Monorepo tooling
 

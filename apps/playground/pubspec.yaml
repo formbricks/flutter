@@ -1,5 +1,5 @@
 name: formbricks_playground
-description: "Demo / manual-QA app for the formbricks_flutter SDK."
+description: "Demo / manual-QA app for the formbricks SDK."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -39,8 +39,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # The local SDK package, resolved through the pub workspace.
-  formbricks_flutter:
-    path: ../../packages/formbricks_flutter
+  formbricks:
+    path: ../../packages/formbricks
 
 dev_dependencies:
   flutter_test:

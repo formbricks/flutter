@@ -1,4 +1,4 @@
-name: formbricks_flutter_workspace
+name: formbricks_workspace
 publish_to: none
 
 # Root of the Formbricks Flutter monorepo.
@@ -10,7 +10,7 @@ environment:
 
 # Members of the pub workspace. Each member pubspec sets `resolution: workspace`.
 workspace:
-  - packages/formbricks_flutter
+  - packages/formbricks
   - apps/playground
 
 dev_dependencies:

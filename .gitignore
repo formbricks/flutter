@@ -11,7 +11,7 @@ build/
 # contains an app → reproducible builds, paired with the fvm-pinned SDK).
 # Members don't generate their own lockfile under a workspace, but ignore any
 # stray ones just in case.
-/packages/formbricks_flutter/pubspec.lock
+/packages/formbricks/pubspec.lock
 /apps/playground/pubspec.lock
 
 # Melos

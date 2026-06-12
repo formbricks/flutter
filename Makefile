@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-SDK_DIR := packages/formbricks_flutter
+SDK_DIR := packages/formbricks
 PLAYGROUND_DIR := apps/playground
 TEST_RESULTS_DIR := test-results
 PLATFORMS := ios android
@@ -97,7 +97,7 @@ test:
 
 test-sdk-machine:
 	mkdir -p $(TEST_RESULTS_DIR)
-	cd $(SDK_DIR) && $(FLUTTER) test --machine > ../../$(TEST_RESULTS_DIR)/formbricks_flutter.json
+	cd $(SDK_DIR) && $(FLUTTER) test --machine > ../../$(TEST_RESULTS_DIR)/formbricks.json
 
 test-playground:
 	cd $(PLAYGROUND_DIR) && $(FLUTTER) test
