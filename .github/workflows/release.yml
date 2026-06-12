@@ -30,6 +30,20 @@ jobs:
         with:
           persist-credentials: false
 
+      # release events can't be filtered by tag in `on:`, so gate here: abort
+      # unless the release tag is a X.Y.Z version (optionally with a -prerelease
+      # suffix). Skipped for manual workflow_dispatch runs.
+      - name: Validate release tag is a version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Release tag '$TAG' is not a X.Y.Z version. Aborting."
+            exit 1
+          fi
+          echo "Release tag '$TAG' OK."
+
       - name: Set up Dart for pub.dev OIDC
         uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
 
