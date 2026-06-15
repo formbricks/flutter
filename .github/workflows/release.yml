@@ -31,15 +31,17 @@ jobs:
           persist-credentials: false
 
       # release events can't be filtered by tag in `on:`, so gate here: abort
-      # unless the release tag is a X.Y.Z version (optionally with a -prerelease
-      # suffix). Skipped for manual workflow_dispatch runs.
+      # unless the release tag is a semver version — X.Y.Z with optional
+      # dot-separated -prerelease and +build identifiers (e.g. 1.2.3, 1.2.3-rc-1,
+      # 1.2.3-rc.1, 1.2.3+build.5). Skipped for manual workflow_dispatch runs.
       - name: Validate release tag is a version
         if: github.event_name == 'release'
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
-            echo "::error::Release tag '$TAG' is not a X.Y.Z version. Aborting."
+          semver='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?([+][0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "$TAG" =~ $semver ]]; then
+            echo "::error::Release tag '$TAG' is not a semver version. Aborting."
             exit 1
           fi
           echo "Release tag '$TAG' OK."
