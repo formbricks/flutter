@@ -4,4 +4,14 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug-only: let the survey WebView load the Formbricks runtime
+         ({appUrl}/js/surveys.umd.cjs) from a local HTTP dev server, e.g.
+         http://10.0.2.2:3000 on the Android emulator. The WebView enforces
+         Android's cleartext policy (which blocks plaintext HTTP by default on
+         API 28+), while the SDK's Dart REST client does not, so without this
+         the runtime script is blocked even though setup/track/identify succeed.
+         This overlay applies to debug builds only; release builds keep cleartext
+         disabled. See docs/TLS.md. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>
