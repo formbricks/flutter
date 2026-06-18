@@ -37,6 +37,30 @@ class _StubHost {
 
 const _stub = Key('stub-webview');
 
+/// A full-bleed, tappable stub host: counts taps that reach the WebView region
+/// and captures the event callback so tests can push geometry.
+class _TappableHost {
+  void Function(WebViewEvent)? onEvent;
+  int taps = 0;
+
+  Widget build(
+    BuildContext context, {
+    required String html,
+    required String appUrl,
+    required void Function(WebViewEvent event) onEvent,
+    LaunchUrlFn? launch,
+    VoidCallback? onLoadError,
+  }) {
+    this.onEvent = onEvent;
+    return GestureDetector(
+      key: _stub,
+      behavior: HitTestBehavior.opaque,
+      onTap: () => taps++,
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
 Future<void> _seedConfig({
   String? language,
   Map<String, dynamic> settings = const {},
@@ -426,6 +450,89 @@ void main() {
     });
 
     expect(launched.map((u) => u.toString()).toList(), ['https://x.com']);
+  });
+
+  group('box-none touch pass-through', () {
+    // Presents the survey above a full-screen host tap target and returns both
+    // so a test can assert which layer a tap reaches.
+    Future<({_TappableHost host, int Function() hostTaps})> presentOver(
+      WidgetTester tester,
+      TSurvey survey,
+    ) async {
+      final host = _TappableHost();
+      var hostTaps = 0;
+      SurveyStore.instance.setSurvey(survey);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => hostTaps++,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+            ],
+          ),
+        ),
+      );
+      await tester.pump(); // post-frame _start
+      await tester.pump(); // present
+      return (host: host, hostTaps: () => hostTaps);
+    }
+
+    testWidgets(
+        'non-overlay: taps outside the card reach the host, inside hit the card',
+        (tester) async {
+      await _seedConfig(); // no overlay configured → box-none
+      final r = await presentOver(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      // Card occupies the top-left 100x100; everything else is pass-through.
+      r.host.onEvent!(const GeometryEvent(Rect.fromLTWH(0, 0, 100, 100)));
+      await tester.pump();
+
+      await tester.tapAt(const Offset(400, 400)); // outside the card
+      await tester.tapAt(const Offset(50, 50)); // inside the card
+      await tester.pump();
+
+      expect(r.hostTaps(), 1, reason: 'outside-card tap falls through to host');
+      expect(r.host.taps, 1, reason: 'inside-card tap hits the WebView');
+    });
+
+    testWidgets('non-overlay before geometry arrives: every tap passes through',
+        (tester) async {
+      await _seedConfig();
+      final r = await presentOver(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      // No GeometryEvent yet → nothing is interactive.
+      await tester.tapAt(const Offset(50, 50));
+      await tester.pump();
+
+      expect(r.hostTaps(), 1);
+      expect(r.host.taps, 0);
+    });
+
+    testWidgets('overlay (backdrop): the survey blocks the whole host',
+        (tester) async {
+      await _seedConfig(settings: {'overlay': 'dark'});
+      final r = await presentOver(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      // A backdrop survey is full-screen; geometry is irrelevant.
+      await tester.tapAt(const Offset(50, 50));
+      await tester.tapAt(const Offset(400, 400));
+      await tester.pump();
+
+      expect(r.hostTaps(), 0, reason: 'backdrop must block the host entirely');
+      expect(r.host.taps, 2, reason: 'all taps land on the full-screen survey');
+    });
   });
 
   testWidgets('a response immediately followed by close keeps the response',
