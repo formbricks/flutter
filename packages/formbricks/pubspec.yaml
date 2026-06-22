@@ -2,7 +2,7 @@ name: formbricks
 description: >-
   Formbricks Flutter SDK — connect your Flutter app to Formbricks, identify
   users, track actions, and render targeted in-app surveys.
-version: 0.1.0
+version: 0.1.1
 homepage: https://formbricks.com
 repository: https://github.com/formbricks/flutter
 issue_tracker: https://github.com/formbricks/flutter/issues
