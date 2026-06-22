@@ -19,6 +19,9 @@ enum FormbricksErrorCode {
   /// An invalid code was supplied (reserved for code actions).
   invalidCode('invalid_code'),
 
+  /// An attribute value used an unsupported type (`List`, `Map`, `bool`, …).
+  unsupportedAttributeValue('unsupported_attribute_value'),
+
   /// An internal SDK failure that is not a network/backend error.
   internalError('internal_error');
 
@@ -83,6 +86,28 @@ final class NetworkError extends FormbricksError {
 
   /// The raw message returned by the server, when present.
   final String? responseMessage;
+}
+
+/// An attribute value used an unsupported type.
+///
+/// Attribute values must be a `String`, `num`, or `DateTime`. `List`, `Map`,
+/// `bool`, and other non-scalar types are rejected before reaching the backend
+/// (which stores attribute values as strings and can't represent them).
+final class UnsupportedAttributeValueError extends FormbricksError {
+  /// Creates an unsupported-value error for [key], whose value had [valueType].
+  UnsupportedAttributeValueError(this.key, this.valueType, {String? message})
+      : super(
+          FormbricksErrorCode.unsupportedAttributeValue,
+          message ??
+              'Unsupported attribute value type `$valueType` for key `$key`. '
+                  'Attribute values must be a String, num, or DateTime.',
+        );
+
+  /// The attribute key whose value was rejected.
+  final String key;
+
+  /// The runtime type name of the offending value (e.g. `bool`, `List<int>`).
+  final String valueType;
 }
 
 /// An invalid code action was supplied. Reserved for the track feature.
