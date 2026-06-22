@@ -1,8 +1,12 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      # Glob is coarse; the "Validate release tag" step does the strict semver
+      # check. pub.dev automated publishing trusts only push/workflow_dispatch
+      # events — NOT release events — so we publish on version-tag pushes.
+      - "[0-9]*.[0-9]*.[0-9]*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,14 +33,12 @@ jobs:
         with:
           persist-credentials: false
 
-      # release events can't be filtered by tag in `on:`, so gate here: abort
-      # unless the release tag is a semver version — X.Y.Z with optional
-      # dot-separated -prerelease and +build identifiers (e.g. 1.2.3, 1.2.3-rc-1,
-      # 1.2.3-rc.1, 1.2.3+build.5). Skipped for manual workflow_dispatch runs.
+      # The tag glob in `on:` is coarse, so gate here: abort unless the pushed
+      # tag is a semver version — X.Y.Z with optional dot-separated -prerelease
+      # and +build identifiers (e.g. 1.2.3, 1.2.3-rc-1, 1.2.3-rc.1, 1.2.3+build.5).
       - name: Validate release tag is a version
-        if: github.event_name == 'release'
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.ref_name }}
         run: |
           semver='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?([+][0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
           if [[ ! "$TAG" =~ $semver ]]; then
@@ -74,8 +76,7 @@ jobs:
         run: make pub-publish-dry-run
 
       - name: Publish to pub.dev
-        if: github.event_name == 'release'
         run: |
-          # Prereqs: the release's tag matches the pubspec version, and pub.dev
+          # Prereqs: the pushed tag matches the pubspec version, and pub.dev
           # automated publishing is configured to trust this repo + workflow.
           make pub-publish-force
