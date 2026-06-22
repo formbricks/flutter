@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/src/common/api_client.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
+import 'package:formbricks/src/common/result.dart';
+import 'package:formbricks/src/types/errors.dart';
 import 'package:formbricks/src/user/attribute.dart';
 import 'package:formbricks/src/user/update_queue.dart';
 import 'package:http/http.dart' as http;
@@ -91,5 +93,33 @@ void main() {
     await setLanguage('de', queue: queue);
 
     expect(queue.pendingAttributes!['language'], 'de');
+  });
+
+  group('unsupported value types are rejected', () {
+    final unsupported = <String, Object>{
+      'bool': true,
+      'List': [1, 2, 3],
+      'Map': {'a': 1},
+    };
+
+    unsupported.forEach((label, value) {
+      test('$label returns UnsupportedAttributeValueError', () async {
+        final result = await setAttributes({'attr': value}, queue: queue);
+
+        expect(result, isA<Err<void, FormbricksError>>());
+        final error = (result as Err<void, FormbricksError>).error;
+        expect(error, isA<UnsupportedAttributeValueError>());
+        expect(error.code, FormbricksErrorCode.unsupportedAttributeValue);
+        expect((error as UnsupportedAttributeValueError).key, 'attr');
+      });
+    });
+
+    test('nothing is queued when a value is unsupported', () async {
+      final result =
+          await setAttributes({'plan': 'pro', 'flag': true}, queue: queue);
+
+      expect(result, isA<Err<void, FormbricksError>>());
+      expect(queue.pendingAttributes, isNull);
+    });
   });
 }
