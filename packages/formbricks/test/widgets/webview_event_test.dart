@@ -70,5 +70,39 @@ void main() {
 
       expect(events, isEmpty);
     });
+
+    test('geometry carries the card rect', () {
+      final event = parseWebViewEvents(
+        '{"type":"Geometry","data":{"x":1.5,"y":2,"width":300,"height":120}}',
+      ).single;
+      expect(event, isA<GeometryEvent>());
+      final rect = (event as GeometryEvent).rect!;
+      expect(rect.left, 1.5);
+      expect(rect.top, 2);
+      expect(rect.width, 300);
+      expect(rect.height, 120);
+    });
+
+    test('geometry with null data → GeometryEvent(null) (card not laid out)',
+        () {
+      final event =
+          parseWebViewEvents('{"type":"Geometry","data":null}').single;
+      expect(event, isA<GeometryEvent>());
+      expect((event as GeometryEvent).rect, isNull);
+    });
+
+    test('geometry missing data → GeometryEvent(null)', () {
+      final event = parseWebViewEvents('{"type":"Geometry"}').single;
+      expect((event as GeometryEvent).rect, isNull);
+    });
+
+    test('geometry with a malformed field → empty (dropped)', () {
+      expect(
+        parseWebViewEvents(
+          '{"type":"Geometry","data":{"x":"nope","y":2,"width":3,"height":4}}',
+        ),
+        isEmpty,
+      );
+    });
   });
 }

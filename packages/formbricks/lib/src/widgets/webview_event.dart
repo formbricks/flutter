@@ -5,11 +5,13 @@
 library;
 
 import 'dart:convert';
+import 'dart:ui' show Rect;
 
 import '../common/logger.dart';
 
 const String _parseErrorMessage = 'Error parsing message from WebView.';
 const String _consoleType = 'Console';
+const String _geometryType = 'Geometry';
 
 /// Base type for messages bridged from the survey WebView.
 sealed class WebViewEvent {
@@ -52,6 +54,18 @@ final class ConsoleEvent extends WebViewEvent {
   final String log;
 }
 
+/// The runtime reported the survey card's bounding rectangle (CSS pixels,
+/// relative to the WebView's top-left), so the host can let touches outside the
+/// card fall through to the app (box-none). [rect] is `null` when no card is
+/// currently laid out (e.g. before render), meaning "nothing is interactive".
+final class GeometryEvent extends WebViewEvent {
+  /// Creates a geometry event carrying the card [rect] (or `null`).
+  const GeometryEvent(this.rect);
+
+  /// The card's bounding rect in WebView-local logical pixels, or `null`.
+  final Rect? rect;
+}
+
 /// Parses one JS-to-Dart payload into zero or more [WebViewEvent]s.
 ///
 /// - Malformed input (not JSON / not an object / a flag with a non-bool value /
@@ -70,6 +84,12 @@ List<WebViewEvent> parseWebViewEvents(String raw) {
   // Dev-only console bridge (mutually exclusive with lifecycle events).
   final consoleEvent = _consoleEvent(map);
   if (consoleEvent != null) return [consoleEvent];
+
+  // Card geometry bridge (mutually exclusive with lifecycle events).
+  if (map['type'] == _geometryType) {
+    final geometryEvent = _geometryEvent(map);
+    return geometryEvent != null ? [geometryEvent] : const [];
+  }
 
   if (!_hasValidShape(map)) return const [];
 
@@ -105,6 +125,30 @@ ConsoleEvent? _consoleEvent(Map<String, dynamic> map) {
   final data = map['data'];
   return ConsoleEvent(data is Map ? jsonEncode(data) : '${data ?? ''}');
 }
+
+/// Parses a `{type:'Geometry', data:{x,y,width,height}|null}` payload.
+///
+/// A `null`/absent `data` means the card is not laid out and maps to
+/// `GeometryEvent(null)`. A present-but-malformed `data` is logged and dropped.
+GeometryEvent? _geometryEvent(Map<String, dynamic> map) {
+  final data = map['data'];
+  if (data == null) return const GeometryEvent(null);
+  if (data is! Map) {
+    _logParseError();
+    return null;
+  }
+  final x = _toDouble(data['x']);
+  final y = _toDouble(data['y']);
+  final width = _toDouble(data['width']);
+  final height = _toDouble(data['height']);
+  if (x == null || y == null || width == null || height == null) {
+    _logParseError();
+    return null;
+  }
+  return GeometryEvent(Rect.fromLTWH(x, y, width, height));
+}
+
+double? _toDouble(Object? value) => value is num ? value.toDouble() : null;
 
 bool _hasValidShape(Map<String, dynamic> map) {
   const boolFlags = [

@@ -9,6 +9,7 @@ library;
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import '../common/config.dart';
@@ -64,6 +65,15 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   bool _closing = false;
   NavigatorState? _navigator;
   RawDialogRoute<void>? _route;
+
+  // Non-overlay (box-none) placements present in a barrier-less [OverlayEntry]
+  // instead of a modal route, so touches outside the survey card reach the host
+  // app. [_cardRect] is the card's bounding rect (WebView-local logical px)
+  // reported over the bridge; pointers outside it fall through. Overlay/backdrop
+  // placements keep the full-screen modal route (the backdrop *should* block).
+  OverlayEntry? _overlayEntry;
+  bool _hasOverlay = false;
+  final ValueNotifier<Rect?> _cardRect = ValueNotifier<Rect?>(null);
 
   // Serializes config read-modify-writes so back-to-back events (e.g. response
   // then close) can't clobber each other.
@@ -133,6 +143,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         current.workspace?.data.settings ?? const <String, dynamic>{};
     final appUrl = current.appUrl ?? '';
     final overwrites = widget.survey.projectOverwrites;
+    final overlay = overwrites?.overlay ?? _asString(settings['overlay']);
+    // A backdrop ("dark"/"light") is a real modal: it should block the host. No
+    // overlay (or "none") is a corner/inline card and must be box-none.
+    _hasOverlay = overlay != null && overlay != 'none';
     final html = buildSurveyHtml(
       SurveyHtmlOptions(
         survey: widget.survey,
@@ -145,19 +159,34 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         placement: overwrites?.placement ?? _asString(settings['placement']),
         clickOutside: overwrites?.clickOutsideClose ??
             _asBool(settings['clickOutsideClose']),
-        overlay: overwrites?.overlay ?? _asString(settings['overlay']),
+        overlay: overlay,
       ),
     );
 
     _phase = _SurveyPhase.presenting;
     final builder = widget.webViewHostBuilder ?? defaultWebViewHost;
+    if (_hasOverlay) {
+      _presentModalRoute(builder, html, appUrl);
+    } else {
+      _presentOverlayEntry(builder, html, appUrl);
+    }
+  }
+
+  /// Overlay/backdrop placements: a full-screen modal route whose transparent
+  /// barrier blocks the host (correct for a backdrop). The web runtime draws the
+  /// dim and handles `clickOutside` via its own `onClose` bridge call.
+  void _presentModalRoute(
+    WebViewHostBuilder builder,
+    String html,
+    String appUrl,
+  ) {
     _navigator = Navigator.of(context, rootNavigator: true);
     final route = RawDialogRoute<void>(
       barrierColor: const Color(0x00000000),
       barrierDismissible: false,
       barrierLabel: '',
       transitionDuration: Duration.zero,
-      pageBuilder: (ctx, _, __) => _modalContent(builder, html, appUrl),
+      pageBuilder: (ctx, _, __) => _surveyContent(builder, html, appUrl),
     );
     _route = route;
     _routeOpen = true;
@@ -169,7 +198,23 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     });
   }
 
-  Widget _modalContent(
+  /// Non-overlay placements: a barrier-less root [OverlayEntry]. Only the card
+  /// rect ([_cardRect], reported over the bridge) hit-tests; everything outside
+  /// falls through to the host app (box-none parity with RN).
+  void _presentOverlayEntry(
+    WebViewHostBuilder builder,
+    String html,
+    String appUrl,
+  ) {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    final entry = OverlayEntry(
+      builder: (_) => _surveyContent(builder, html, appUrl),
+    );
+    _overlayEntry = entry;
+    overlay.insert(entry);
+  }
+
+  Widget _surveyContent(
     WebViewHostBuilder builder,
     String html,
     String appUrl,
@@ -177,17 +222,29 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // Builder so the keyboard inset is read in a context that rebuilds on
     // keyboard show/hide.
     return Builder(
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: builder(
-          ctx,
-          html: html,
-          appUrl: appUrl,
-          onEvent: _onEvent,
-          launch: widget.launch,
-          onLoadError: _handleWebViewLoadError,
-        ),
-      ),
+      builder: (ctx) {
+        final webView = Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+          child: builder(
+            ctx,
+            html: html,
+            appUrl: appUrl,
+            onEvent: _onEvent,
+            launch: widget.launch,
+            onLoadError: _handleWebViewLoadError,
+          ),
+        );
+        // Backdrop placements fill and block the screen. Non-overlay placements
+        // only accept pointers within the reported card rect; the WebView paints
+        // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
+        // WebView as `child` keeps its controller alive across geometry updates.
+        if (_hasOverlay) return webView;
+        return ValueListenableBuilder<Rect?>(
+          valueListenable: _cardRect,
+          builder: (_, rect, child) => _PointerMask(rect: rect, child: child!),
+          child: webView,
+        );
+      },
     );
   }
 
@@ -202,6 +259,8 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         unawaited(openExternalUrl(url, launch: widget.launch));
       case CloseEvent():
         _closeSurvey();
+      case GeometryEvent(:final rect):
+        _cardRect.value = rect;
       case ConsoleEvent(:final log):
         Logger.debug('[Console] $log');
     }
@@ -257,10 +316,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _closing = true;
     _phase = _SurveyPhase.closing;
 
-    if (!alreadyDismissed && _routeOpen && _route != null && _route!.isActive) {
-      _navigator?.removeRoute(_route!);
-    }
-    _routeOpen = false;
+    _dismissPresentation(alreadyDismissed: alreadyDismissed);
 
     // Queue the close write after display/response updates so bridge events
     // cannot overtake each other. The close refilters too.
@@ -275,6 +331,19 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _store.resetSurvey();
   }
 
+  /// Tears down whichever presentation is active (modal route or overlay
+  /// entry). Idempotent: the active-route guard and null overlay entry make
+  /// repeat calls (close then dispose) safe. [alreadyDismissed] skips the route
+  /// removal when the route popped itself (e.g. Android back).
+  void _dismissPresentation({bool alreadyDismissed = false}) {
+    if (!alreadyDismissed && _routeOpen && _route != null && _route!.isActive) {
+      _navigator?.removeRoute(_route!);
+    }
+    _routeOpen = false;
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
   void _reset() => _store.resetSurvey();
 
   void _enqueueConfigOp(Future<void> Function() op) {
@@ -286,13 +355,11 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   @override
   void dispose() {
     _delayTimer?.cancel();
-    // External store reset can unmount us without a close; remove the route
-    // via the captured NavigatorState (no live BuildContext required). The
-    // isActive guard makes removal idempotent if the route was already popped.
-    if (_routeOpen && _route != null && _route!.isActive) {
-      _navigator?.removeRoute(_route!);
-    }
-    _routeOpen = false;
+    // External store reset can unmount us without a close; tear down the active
+    // presentation via captured handles (no live BuildContext required). The
+    // guards make removal idempotent if it was already dismissed.
+    _dismissPresentation();
+    _cardRect.dispose();
     super.dispose();
   }
 
@@ -302,3 +369,43 @@ class _SurveyWebViewState extends State<SurveyWebView> {
 
 String? _asString(Object? value) => value is String ? value : null;
 bool? _asBool(Object? value) => value is bool ? value : null;
+
+/// A render box that paints its child normally but only forwards pointer hits
+/// within [rect] (local logical px). Hits outside [rect] — or all hits when
+/// [rect] is `null` — are rejected so they fall through to whatever is behind
+/// (the host app). This is how the SDK achieves RN's `pointerEvents="box-none"`
+/// for a full-bleed platform WebView, which otherwise hit-tests its whole area.
+class _PointerMask extends SingleChildRenderObjectWidget {
+  const _PointerMask({required this.rect, required super.child});
+
+  final Rect? rect;
+
+  @override
+  _RenderPointerMask createRenderObject(BuildContext context) =>
+      _RenderPointerMask(rect);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderPointerMask renderObject,
+  ) {
+    renderObject.rect = rect;
+  }
+}
+
+class _RenderPointerMask extends RenderProxyBox {
+  _RenderPointerMask(this._rect);
+
+  Rect? _rect;
+  set rect(Rect? value) {
+    if (value == _rect) return;
+    _rect = value;
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final rect = _rect;
+    if (rect == null || !rect.contains(position)) return false;
+    return super.hitTest(result, position: position);
+  }
+}

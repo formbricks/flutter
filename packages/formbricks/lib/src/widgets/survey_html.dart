@@ -137,6 +137,58 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
       function getSetIsResponseSendingFinished() { /* noop */ };
       function getSetIsError() { /* noop */ };
 
+      // Reports the survey card's bounding rect (CSS px, viewport-relative) to
+      // the host so it can pass touches outside the card through to the app
+      // (box-none). The native WebView hit-tests its whole rectangle and ignores
+      // the page's `pointer-events:none`, so the host masks pointers itself and
+      // needs the card geometry to know where the card is.
+      var fbLastGeometry = '';
+      var fbGeometryRaf = null;
+      var fbGeometryStable = 0;
+      function fbCardRect() {
+        // The survey card is the single modal dialog the runtime renders inside
+        // its #fbjs container (survey-container.tsx). Scoped + both attributes
+        // so we never grab the full-screen #fbjs wrapper (that would defeat
+        // box-none) or a future nested dialog. querySelector returns the
+        // outermost match in document order, i.e. the card itself.
+        var el = document.querySelector('#fbjs [role="dialog"][aria-modal="true"]');
+        if (!el) return null;
+        var r = el.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return null;
+        return { x: r.left, y: r.top, width: r.width, height: r.height };
+      }
+      function fbGeometryTick() {
+        var rect = fbCardRect();
+        var key = rect
+          ? [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)].join(',')
+          : 'null';
+        if (key !== fbLastGeometry) {
+          fbLastGeometry = key;
+          fbGeometryStable = 0;
+          postFormbricksMessage({ type: 'Geometry', data: rect });
+        } else {
+          fbGeometryStable++;
+        }
+        // Idle once the rect has been stable for ~1.5s (open/step animations
+        // settle); observers below restart the loop on any later change.
+        if (fbGeometryStable > 90) { fbGeometryRaf = null; return; }
+        fbGeometryRaf = window.requestAnimationFrame(fbGeometryTick);
+      }
+      function fbEnsureGeometryLoop() {
+        if (fbGeometryRaf == null) {
+          fbGeometryStable = 0;
+          fbGeometryRaf = window.requestAnimationFrame(fbGeometryTick);
+        }
+      }
+      function fbObserveGeometry() {
+        try {
+          var mo = new MutationObserver(fbEnsureGeometryLoop);
+          mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+        } catch (e) {}
+        window.addEventListener('resize', fbEnsureGeometryLoop);
+        window.addEventListener('orientationchange', fbEnsureGeometryLoop);
+      }
+
       let closedForError = false;
       function closeOnError(message, error) {
         if (closedForError) return;
@@ -163,6 +215,8 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
             return;
           }
           runtime.renderSurvey(surveyProps);
+          fbObserveGeometry();
+          fbEnsureGeometryLoop();
         } catch (error) {
           closeOnError('Failed to render Formbricks survey:', error);
         }
