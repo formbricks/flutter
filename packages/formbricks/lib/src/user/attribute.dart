@@ -15,8 +15,8 @@ import 'update_queue.dart';
 /// Sets [attributes] on the current user/contact.
 ///
 /// `DateTime` values become UTC ISO-8601 strings; `num` and `String` values are
-/// passed through unchanged. Any other value (`null`, `bool`, `List`, `Map`,
-/// and anything else) is rejected synchronously with an
+/// passed through unchanged. Unsupported value types (`List`, `Map`, `bool`,
+/// and any other non-scalar) are rejected synchronously with an
 /// [UnsupportedAttributeValueError] before anything is queued. Otherwise queues
 /// the change through the debounced [UpdateQueue] and returns `Ok` immediately
 /// (the network call, and any no-userId error, surface from the queue's flush).
@@ -28,12 +28,15 @@ Future<Result<void, FormbricksError>> setAttributes(
   for (final entry in attributes.entries) {
     final key = entry.key;
     final value = entry.value;
-    // Reject anything that isn't a `String`, `num`, or `DateTime` (`null`,
-    // `bool`, `List`, `Map`, and anything else) before queueing, so the caller
-    // gets a synchronous, clear error instead of silently bad data on the wire.
-    // The backend infers the attribute type from the JSON value and has no
-    // type for these.
-    if (value is! String && value is! num && value is! DateTime) {
+    // Reject unsupported value types (`List`, `Map`, `bool`, and any other
+    // non-scalar) before queueing, so the caller gets a synchronous, clear
+    // error instead of silently bad data on the wire. The backend stores
+    // attribute values as strings, so only `String`, `num`, and `DateTime`
+    // (serialized below) are supported.
+    if (value != null &&
+        value is! String &&
+        value is! num &&
+        value is! DateTime) {
       final error = UnsupportedAttributeValueError(
         key,
         value.runtimeType.toString(),

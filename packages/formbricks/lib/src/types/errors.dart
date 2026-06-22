@@ -19,7 +19,7 @@ enum FormbricksErrorCode {
   /// An invalid code was supplied (reserved for code actions).
   invalidCode('invalid_code'),
 
-  /// An attribute value used an unsupported type (`null`, `bool`, `List`, `Map`, …).
+  /// An attribute value used an unsupported type (`List`, `Map`, `bool`, …).
   unsupportedAttributeValue('unsupported_attribute_value'),
 
   /// An internal SDK failure that is not a network/backend error.
@@ -90,9 +90,9 @@ final class NetworkError extends FormbricksError {
 
 /// An attribute value used an unsupported type.
 ///
-/// Attribute values must be a `String`, `num`, or `DateTime`. Anything else
-/// (`null`, `bool`, `List`, `Map`, …) is rejected before reaching the backend,
-/// which infers the attribute type from the JSON value and has no type for it.
+/// Attribute values must be a `String`, `num`, or `DateTime`. `List`, `Map`,
+/// `bool`, and other non-scalar types are rejected before reaching the backend
+/// (which stores attribute values as strings and can't represent them).
 final class UnsupportedAttributeValueError extends FormbricksError {
   /// Creates an unsupported-value error for [key], whose value had [valueType].
   UnsupportedAttributeValueError(this.key, this.valueType, {String? message})
