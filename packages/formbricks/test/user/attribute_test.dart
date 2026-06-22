@@ -114,6 +114,17 @@ void main() {
       });
     });
 
+    test('null returns UnsupportedAttributeValueError', () async {
+      final result = await setAttributes({'attr': null}, queue: queue);
+
+      expect(result, isA<Err<void, FormbricksError>>());
+      final error = (result as Err<void, FormbricksError>).error;
+      expect(error, isA<UnsupportedAttributeValueError>());
+      expect(error.code, FormbricksErrorCode.unsupportedAttributeValue);
+      expect((error as UnsupportedAttributeValueError).key, 'attr');
+      expect(queue.pendingAttributes, isNull);
+    });
+
     test('nothing is queued when a value is unsupported', () async {
       final result =
           await setAttributes({'plan': 'pro', 'flag': true}, queue: queue);
