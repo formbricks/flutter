@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Fix host app touches not passing through to the underlying widgets.
+- Validate unsupported attribute value types with a clear error.
+- Fix local SDK being blocked on the Android emulator.
+- Add manual platform entries to `pubspec.yaml`.
+
 ## 0.1.0
 
 First beta release.
