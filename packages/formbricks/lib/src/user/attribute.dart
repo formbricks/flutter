@@ -33,7 +33,10 @@ Future<Result<void, FormbricksError>> setAttributes(
     // error instead of silently bad data on the wire. The backend stores
     // attribute values as strings, so only `String`, `num`, and `DateTime`
     // (serialized below) are supported.
-    if (value != null && value is! String && value is! num && value is! DateTime) {
+    if (value != null &&
+        value is! String &&
+        value is! num &&
+        value is! DateTime) {
       final error = UnsupportedAttributeValueError(
         key,
         value.runtimeType.toString(),
