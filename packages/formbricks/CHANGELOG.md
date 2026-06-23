@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. No API changes since 0.1.1 — promotes the SDK to a
+stable 1.0.
+
 ## 0.1.1
 
 - Fix host app touches not passing through to the underlying widgets.
