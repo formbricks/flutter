@@ -30,6 +30,13 @@ final class ResponseCreatedEvent extends WebViewEvent {
   const ResponseCreatedEvent();
 }
 
+/// The survey was completed and the finished response was accepted by the
+/// backend (the runtime gates this on `isResponseSendingFinished`).
+final class FinishedEvent extends WebViewEvent {
+  /// Creates a finished event.
+  const FinishedEvent();
+}
+
 /// The runtime asked to close the survey.
 final class CloseEvent extends WebViewEvent {
   /// Creates a close event.
@@ -74,9 +81,8 @@ final class GeometryEvent extends WebViewEvent {
 /// - A `Console` payload maps to a single [ConsoleEvent] (mutually exclusive,
 ///   like the runtime handler).
 /// - Otherwise one event is emitted per truthy flag, in handler order
-///   (display, response, open-external-url, close). A well-formed but
-///   non-actionable payload (e.g. `{onFinished:true}`) yields `const []`
-///   quietly.
+///   (display, response, finished, open-external-url, close). A well-formed but
+///   non-actionable payload (e.g. `{}`) yields `const []` quietly.
 List<WebViewEvent> parseWebViewEvents(String raw) {
   final map = _decodeMessage(raw);
   if (map == null) return const [];
@@ -98,6 +104,7 @@ List<WebViewEvent> parseWebViewEvents(String raw) {
   if (map['onResponseCreated'] == true) {
     events.add(const ResponseCreatedEvent());
   }
+  if (map['onFinished'] == true) events.add(const FinishedEvent());
   if (map['onOpenExternalURL'] == true) {
     events.add(OpenExternalUrlEvent(_externalUrl(map)!));
   }

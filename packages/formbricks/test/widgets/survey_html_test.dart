@@ -54,6 +54,41 @@ void main() {
       expect(html, contains('"isWebEnvironment":false'));
     });
 
+    test('bridges onFinished and hands it to renderSurvey', () {
+      final html = buildSurveyHtml(_opts());
+
+      expect(html, contains('function onFinished()'));
+      expect(html, contains('postFormbricksMessage({ onFinished: true })'));
+
+      // Defining the shim is not enough — the runtime only calls it if it is
+      // listed in the props object, so assert it inside that block.
+      final propsBlock = html.substring(
+        html.indexOf('const surveyProps = {'),
+        html.indexOf('const runtime = window.formbricksSurveys'),
+      );
+      expect(propsBlock, contains('onFinished,'));
+      expect(propsBlock, contains('onDisplayCreated,'));
+      expect(propsBlock, contains('onResponseCreated,'));
+      expect(propsBlock, contains('onClose,'));
+    });
+
+    test('forwards the interaction-refresh gate to the runtime payload', () {
+      final html = buildSurveyHtml(
+        _opts(
+          survey: _survey({
+            'interactionRefresh': {
+              'onDisplay': true,
+              'onResponse': false,
+              'onFinished': true,
+            },
+          }),
+        ),
+      );
+
+      expect(html, contains('"interactionRefresh"'));
+      expect(html, contains('"onFinished":true'));
+    });
+
     test('script and runtime failures close the survey route', () {
       final html = buildSurveyHtml(_opts());
       const timeoutClose =

@@ -134,6 +134,13 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
         postFormbricksMessage({ onResponseCreated: true });
       };
 
+      // Fires once the finished response has been accepted by the backend — the
+      // runtime gates this on isResponseSendingFinished, and passing
+      // getSetIsResponseSendingFinished below flips that initial state to false.
+      function onFinished() {
+        postFormbricksMessage({ onFinished: true });
+      };
+
       function getSetIsResponseSendingFinished() { /* noop */ };
       function getSetIsError() { /* noop */ };
 
@@ -204,6 +211,7 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
             ...options,
             onDisplayCreated,
             onResponseCreated,
+            onFinished,
             onClose,
             getSetIsResponseSendingFinished,
             getSetIsError,

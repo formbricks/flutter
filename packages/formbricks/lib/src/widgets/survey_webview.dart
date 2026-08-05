@@ -19,6 +19,7 @@ import '../common/utils.dart';
 import '../survey/survey_store.dart';
 import '../types/config.dart';
 import '../types/survey.dart';
+import '../user/interaction_refresh.dart';
 import 'default_webview_host.dart';
 import 'survey_html.dart';
 import 'webview_event.dart';
@@ -78,6 +79,9 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   // Serializes config read-modify-writes so back-to-back events (e.g. response
   // then close) can't clobber each other.
   Future<void> _configOps = Future<void>.value();
+
+  // Interaction sources already refreshed during this showing.
+  final Set<InteractionSource> _refreshedSources = <InteractionSource>{};
 
   FormbricksConfig get _config => widget.config ?? FormbricksConfig.instance;
   SurveyStore get _store => widget.store ?? SurveyStore.instance;
@@ -253,8 +257,12 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     switch (event) {
       case DisplayCreatedEvent():
         _enqueueConfigOp(_recordDisplay);
+        _refreshSegmentsOnce(InteractionSource.onDisplay);
       case ResponseCreatedEvent():
         _enqueueConfigOp(_recordResponse);
+        _refreshSegmentsOnce(InteractionSource.onResponse);
+      case FinishedEvent():
+        _refreshSegmentsOnce(InteractionSource.onFinished);
       case OpenExternalUrlEvent(:final url):
         unawaited(openExternalUrl(url, launch: widget.launch));
       case CloseEvent():
@@ -264,6 +272,22 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       case ConsoleEvent(:final log):
         Logger.debug('[Console] $log');
     }
+  }
+
+  /// Forwards an interaction to the segment refresh at most once per source.
+  ///
+  /// One `State` lives per survey showing, so this is scoped to that showing.
+  /// The survey runtime guards `onResponseCreated` itself, but `onFinished` is
+  /// not guarded there, and a self-hosted server may serve an older bundle — so
+  /// the refresh is gated here too. Only the refresh is gated; the local
+  /// displays/responses bookkeeping keeps its existing behaviour.
+  void _refreshSegmentsOnce(InteractionSource source) {
+    if (!_refreshedSources.add(source)) return;
+    refreshSegmentsAfterInteraction(
+      _config.getOrNull()?.user.data.userId,
+      widget.survey,
+      source,
+    );
   }
 
   void _handleWebViewLoadError() {

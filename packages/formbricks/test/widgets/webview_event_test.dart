@@ -62,7 +62,28 @@ void main() {
     });
 
     test('well-formed but non-actionable payload → empty (quiet)', () {
-      expect(parseWebViewEvents('{"onFinished":true}'), isEmpty);
+      expect(parseWebViewEvents('{}'), isEmpty);
+      expect(parseWebViewEvents('{"onFinished":false}'), isEmpty);
+    });
+
+    test('onFinished maps to a FinishedEvent', () {
+      expect(
+        parseWebViewEvents('{"onFinished":true}'),
+        [isA<FinishedEvent>()],
+      );
+    });
+
+    test('finished is emitted after response, in handler order', () {
+      expect(
+        parseWebViewEvents(
+          '{"onResponseCreated":true,"onFinished":true,"onClose":true}',
+        ),
+        [
+          isA<ResponseCreatedEvent>(),
+          isA<FinishedEvent>(),
+          isA<CloseEvent>(),
+        ],
+      );
     });
 
     test('file-pick payload is ignored by the Flutter bridge', () {
