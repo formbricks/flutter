@@ -23,6 +23,7 @@ class TSurvey {
     this.recontactDays,
     this.displayPercentage,
     this.segment,
+    this.interactionRefresh,
     required Map<String, dynamic> raw,
   }) : _raw = raw;
 
@@ -62,6 +63,11 @@ class TSurvey {
             : TSurveySegment.fromJson(
                 (json['segment'] as Map).cast<String, dynamic>(),
               ),
+        interactionRefresh: json['interactionRefresh'] is Map
+            ? TInteractionRefresh.fromJson(
+                (json['interactionRefresh'] as Map).cast<String, dynamic>(),
+              )
+            : null,
         raw: json,
       );
 
@@ -101,6 +107,10 @@ class TSurvey {
   /// The segment targeting this survey, or null when untargeted.
   final TSurveySegment? segment;
 
+  /// Whether interacting with this survey can change some live survey's segment
+  /// membership. Null unless the workspace uses survey-interaction targeting.
+  final TInteractionRefresh? interactionRefresh;
+
   final Map<String, dynamic> _raw;
 
   /// Whether the survey is available in more than one language.
@@ -108,6 +118,66 @@ class TSurvey {
 
   /// The original decoded JSON, returned verbatim for the survey runtime.
   Map<String, dynamic> toJson() => _raw;
+}
+
+/// The survey-lifecycle moments that can flip interaction-based segment
+/// membership. Names match the source names used by the JS SDK.
+enum InteractionSource {
+  /// A display was created — drives `have seen` / `have not seen`.
+  onDisplay,
+
+  /// A response was created — drives `have started responding to`.
+  onResponse,
+
+  /// The response was finished — drives `have completed` / `have not completed`.
+  onFinished,
+}
+
+/// Per-survey gate for the post-interaction segment refresh.
+///
+/// Each flag says whether interacting with *this* survey via that event can
+/// change some live survey's segment membership — so a survey referenced only by
+/// a "have seen" filter refreshes on display but not on response or finish, and
+/// a survey no interaction filter points at never refreshes at all.
+///
+/// The client API attaches this only for workspaces that use survey-interaction
+/// targeting, so it is absent for everyone else, and present-but-all-false for
+/// surveys in such a workspace that no interaction filter references.
+class TInteractionRefresh {
+  /// Creates a gate. Every flag defaults to "do not refresh".
+  const TInteractionRefresh({
+    this.onDisplay = false,
+    this.onResponse = false,
+    this.onFinished = false,
+  });
+
+  /// Builds a gate from decoded JSON.
+  ///
+  /// Deliberately tolerant: a missing or non-boolean flag reads as `false`, so a
+  /// partial object from the server can never fail the workspace-state decode
+  /// and blank out every survey.
+  factory TInteractionRefresh.fromJson(Map<String, dynamic> json) =>
+      TInteractionRefresh(
+        onDisplay: json['onDisplay'] == true,
+        onResponse: json['onResponse'] == true,
+        onFinished: json['onFinished'] == true,
+      );
+
+  /// Whether a display can flip membership.
+  final bool onDisplay;
+
+  /// Whether a created response can flip membership.
+  final bool onResponse;
+
+  /// Whether finishing the survey can flip membership.
+  final bool onFinished;
+
+  /// Whether an interaction of this kind should trigger a user-state refresh.
+  bool shouldRefresh(InteractionSource source) => switch (source) {
+        InteractionSource.onDisplay => onDisplay,
+        InteractionSource.onResponse => onResponse,
+        InteractionSource.onFinished => onFinished,
+      };
 }
 
 /// The minimal segment shape read for targeting: `{ id, hasFilters }`.

@@ -7,6 +7,7 @@ import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
 import 'package:formbricks/src/survey/survey_store.dart';
 import 'package:formbricks/src/types/survey.dart';
+import 'package:formbricks/src/user/update_queue.dart';
 import 'package:formbricks/src/widgets/survey_webview.dart';
 import 'package:formbricks/src/widgets/webview_event.dart';
 import 'package:formbricks/src/widgets/webview_navigation.dart';
@@ -63,6 +64,7 @@ class _TappableHost {
 
 Future<void> _seedConfig({
   String? language,
+  String? userId,
   Map<String, dynamic> settings = const {},
   List<Map<String, dynamic>> surveys = const [],
   List<Map<String, dynamic>> filteredSurveys = const [],
@@ -83,7 +85,10 @@ Future<void> _seedConfig({
           },
     'user': {
       'expiresAt': null,
-      'data': {if (language != null) 'language': language},
+      'data': {
+        if (language != null) 'language': language,
+        if (userId != null) 'userId': userId,
+      },
     },
     'filteredSurveys': filteredSurveys,
     'status': {'value': 'success', 'expiresAt': null},
@@ -249,6 +254,80 @@ void main() {
 
     expect(SurveyStore.instance.survey, isNull);
     expect(find.byKey(_stub), findsNothing);
+  });
+
+  group('interaction-based segment refresh', () {
+    setUp(UpdateQueue.resetInstance);
+
+    testWidgets('FinishedEvent nudges the refresh when the gate allows it',
+        (tester) async {
+      await _seedConfig(userId: 'user-1');
+      final host = await _present(
+        tester,
+        _survey({
+          'id': 's1',
+          'languages': <dynamic>[],
+          'interactionRefresh': {'onFinished': true},
+        }),
+      );
+
+      host.onEvent!(const FinishedEvent());
+
+      expect(UpdateQueue.instance.pendingUserId, 'user-1');
+      // Cancel the debounced flush so no timer outlives the test.
+      UpdateQueue.resetInstance();
+    });
+
+    testWidgets('DisplayCreatedEvent nudges the refresh when flagged',
+        (tester) async {
+      await _seedConfig(userId: 'user-1');
+      final host = await _present(
+        tester,
+        _survey({
+          'id': 's1',
+          'languages': <dynamic>[],
+          'interactionRefresh': {'onDisplay': true},
+        }),
+      );
+
+      host.onEvent!(const DisplayCreatedEvent());
+
+      expect(UpdateQueue.instance.pendingUserId, 'user-1');
+      UpdateQueue.resetInstance();
+    });
+
+    testWidgets('a closed gate makes every event a no-op', (tester) async {
+      await _seedConfig(userId: 'user-1');
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      host.onEvent!(const FinishedEvent());
+      host.onEvent!(const DisplayCreatedEvent());
+
+      expect(UpdateQueue.instance.isEmpty, isTrue);
+    });
+
+    testWidgets('the same source refreshes at most once per showing',
+        (tester) async {
+      await _seedConfig(userId: 'user-1');
+      final host = await _present(
+        tester,
+        _survey({
+          'id': 's1',
+          'languages': <dynamic>[],
+          'interactionRefresh': {'onFinished': true},
+        }),
+      );
+
+      host.onEvent!(const FinishedEvent());
+      expect(UpdateQueue.instance.pendingUserId, 'user-1');
+
+      UpdateQueue.resetInstance();
+      host.onEvent!(const FinishedEvent());
+      expect(UpdateQueue.instance.isEmpty, isTrue);
+    });
   });
 
   testWidgets(
