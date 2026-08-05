@@ -36,5 +36,9 @@ void refreshSegmentsAfterInteraction(
 
   final queue = UpdateQueue.instance;
   queue.updateUserId(userId);
-  unawaited(queue.processUpdates());
+  // `processUpdates` completes with an error when the flush throws, and this is
+  // fire-and-forget — `unawaited` marks the future as intentionally not awaited but
+  // does not handle its errors, so one would surface as an unhandled async error.
+  // The queue already logs the real cause, so swallow it rather than report twice.
+  unawaited(queue.processUpdates().catchError((Object _) {}));
 }

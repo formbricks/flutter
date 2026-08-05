@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/src/types/survey.dart';
 import 'package:formbricks/src/user/interaction_refresh.dart';
@@ -108,6 +110,34 @@ void main() {
 
         expect(UpdateQueue.instance.pendingUserId, 'user-1', reason: '$source');
       }
+    });
+
+    /// The flush is fire-and-forget, so an error on the returned future would otherwise
+    /// surface as an unhandled async error and, in a test zone, fail the test.
+    test('a failing flush does not escape as an unhandled async error',
+        () async {
+      final failures = <Object>[];
+
+      await runZonedGuarded(
+        () async {
+          refreshSegmentsAfterInteraction(
+            'user-1',
+            _survey(
+              interactionRefresh: const TInteractionRefresh(onDisplay: true),
+            ),
+            InteractionSource.onDisplay,
+          );
+
+          // Force the queued flush to fail: no appUrl/workspaceId is configured, so
+          // `_flush` throws once the debounce elapses.
+          await Future<void>.delayed(
+            UpdateQueue.debounceDelay + const Duration(milliseconds: 100),
+          );
+        },
+        (error, _) => failures.add(error),
+      );
+
+      expect(failures, isEmpty);
     });
 
     test('routes through the queue so a burst can coalesce', () {
