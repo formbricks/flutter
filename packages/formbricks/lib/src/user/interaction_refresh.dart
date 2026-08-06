@@ -40,5 +40,10 @@ void refreshSegmentsAfterInteraction(
   // fire-and-forget — `unawaited` marks the future as intentionally not awaited but
   // does not handle its errors, so one would surface as an unhandled async error.
   // The queue already logs the real cause, so swallow it rather than report twice.
-  unawaited(queue.processUpdates().catchError((Object _) {}));
+  unawaited(
+    queue.processUpdates().catchError((Object _) {
+      // Intentionally empty. The queue already logged the real cause; this handler
+      // exists only so the error does not escape an unawaited future.
+    }),
+  );
 }
