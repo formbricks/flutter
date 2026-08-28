@@ -10,6 +10,7 @@ import '../common/config.dart';
 import '../common/logger.dart';
 import '../common/result.dart';
 import '../common/setup.dart';
+import '../survey/embedded_data.dart';
 import '../types/errors.dart';
 import 'update_queue.dart';
 
@@ -45,6 +46,11 @@ Future<Result<void, FormbricksError>> setUserId(
     // the new user.
     q.clear();
     await tearDown(config: cfg);
+    // An identity switch: the ambient Embedded Data bag may carry the previous
+    // user's context, which must not ride onto the next user's responses on a
+    // shared device. First-time identification keeps the bag — a host
+    // legitimately pushes context before it knows who the user is.
+    EmbeddedDataStore.instance.clear();
   }
 
   q.updateUserId(userId);
@@ -65,5 +71,8 @@ Future<Result<void, FormbricksError>> logout({
   // after logout.
   (queue ?? UpdateQueue.instance).clear();
   await tearDown(config: config ?? FormbricksConfig.instance);
+  // Same identity-switch rule as setUserId: logout must not let the previous
+  // user's ambient context leak onto whoever uses the app next.
+  EmbeddedDataStore.instance.clear();
   return const Result.ok(null);
 }

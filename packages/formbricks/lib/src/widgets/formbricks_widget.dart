@@ -13,6 +13,7 @@ import '../common/logger.dart';
 import '../common/result.dart';
 import '../common/setup.dart' as setup_internal;
 import '../survey/action.dart' as action;
+import '../survey/embedded_data.dart';
 import '../survey/survey_store.dart';
 import '../types/errors.dart';
 import '../types/survey.dart';
@@ -29,6 +30,10 @@ import 'webview_navigation.dart';
 /// modal WebView route. The imperative API (`setup`, `track`) lives as static
 /// methods that route through a hidden command queue so calls run in strict
 /// submission order.
+/// The "no argument" marker for [Formbricks.clearEmbeddedData]. A private const
+/// object, so no caller can produce a value `identical` to it by accident.
+const Object _clearWholeBag = Object();
+
 class Formbricks extends StatefulWidget {
   /// Creates the host widget for [appUrl] / [workspaceId].
   const Formbricks({
@@ -152,6 +157,61 @@ class Formbricks extends StatefulWidget {
       () => attribute.setLanguage(language),
       checkSetup: true,
     );
+  }
+
+  /// Attaches Embedded Data to future responses without tying it to a trigger.
+  ///
+  /// Merges into an in-memory bag — last write wins per key, and an explicit
+  /// `null` removes a key. Values land only on the survey's declared *ingested*
+  /// fields; anything else is dropped and logged by the survey renderer, never
+  /// fatal. Values must be a `String`, `num`, `bool` or `DateTime`.
+  ///
+  /// Deliberately synchronous and **not** routed through the command queue,
+  /// unlike the methods above: a host that pushes context at launch must not
+  /// have that value silently dropped because `setup` had not finished. The bag
+  /// is pure memory — nothing here needs the SDK to be running, and calling it
+  /// on every screen change is free.
+  ///
+  /// The bag is snapshotted when a survey is displayed and frozen for its
+  /// lifetime, so a value set while a survey is on screen reaches the *next*
+  /// response, not that one. It is never persisted: a cold app start begins
+  /// empty and the host re-pushes.
+  ///
+  /// ```dart
+  /// Formbricks.setEmbeddedData({'plan': 'pro', 'seats': 25});
+  /// Formbricks.setEmbeddedData({'screen': null}); // removes the key
+  /// ```
+  static void setEmbeddedData(Map<String, Object?> data) {
+    EmbeddedDataStore.instance.set(data);
+  }
+
+  /// Removes one Embedded Data key, or the whole bag when called with no
+  /// argument — logout, or a hard context switch.
+  ///
+  /// ```dart
+  /// Formbricks.clearEmbeddedData('plan'); // one key
+  /// Formbricks.clearEmbeddedData();       // everything
+  /// ```
+  ///
+  /// The [key] is typed `Object?` around a private sentinel rather than as a
+  /// plain `String?`, so that "called with no argument" and "called with a key
+  /// that evaluated to null" stay different things — the same distinction the
+  /// JS SDK draws by argument count. A host that reads the key from its own
+  /// state (`clearEmbeddedData(prefs['fieldToClear'])`) must not wipe the whole
+  /// bag when that state is empty; that call is a logged no-op.
+  static void clearEmbeddedData([Object? key = _clearWholeBag]) {
+    if (identical(key, _clearWholeBag)) {
+      EmbeddedDataStore.instance.clear();
+      return;
+    }
+    if (key is! String) {
+      Logger.error(
+        'clearEmbeddedData: expected a field name — nothing was cleared '
+        '(call with no argument to clear everything)',
+      );
+      return;
+    }
+    EmbeddedDataStore.instance.remove(key);
   }
 
   /// Logs the current user out, resetting user state to anonymous
