@@ -23,6 +23,22 @@ import 'default_webview_host.dart';
 import 'survey_webview.dart';
 import 'webview_navigation.dart';
 
+/// The type of the "no argument" marker for [Formbricks.clearEmbeddedData].
+///
+/// Library-private on purpose. A default parameter value must be a
+/// compile-time constant, and Dart canonicalizes const instances — so a
+/// `const Object()` marker is `identical` to *every* `const Object()` in the
+/// program, and `clearEmbeddedData(const Object())` from host code would wipe
+/// the whole bag instead of being refused. Naming a private type is the one
+/// thing a caller outside this library cannot do, so a const instance of
+/// `_ClearWholeBag` is both a valid default value and unforgeable.
+class _ClearWholeBag {
+  const _ClearWholeBag();
+}
+
+/// The "no argument" marker for [Formbricks.clearEmbeddedData].
+const Object _clearWholeBag = _ClearWholeBag();
+
 /// The Formbricks SDK facade and drop-in host widget.
 ///
 /// Place `Formbricks(appUrl: ..., workspaceId: ...)` in your widget tree: it
@@ -30,10 +46,6 @@ import 'webview_navigation.dart';
 /// modal WebView route. The imperative API (`setup`, `track`) lives as static
 /// methods that route through a hidden command queue so calls run in strict
 /// submission order.
-/// The "no argument" marker for [Formbricks.clearEmbeddedData]. A private const
-/// object, so no caller can produce a value `identical` to it by accident.
-const Object _clearWholeBag = Object();
-
 class Formbricks extends StatefulWidget {
   /// Creates the host widget for [appUrl] / [workspaceId].
   const Formbricks({
@@ -199,6 +211,11 @@ class Formbricks extends StatefulWidget {
   /// JS SDK draws by argument count. A host that reads the key from its own
   /// state (`clearEmbeddedData(prefs['fieldToClear'])`) must not wipe the whole
   /// bag when that state is empty; that call is a logged no-op.
+  ///
+  /// The sentinel is a const instance of the private [_ClearWholeBag] rather
+  /// than a `const Object()`: const instances are canonicalized, so the latter
+  /// would make `clearEmbeddedData(const Object())` from host code an accidental
+  /// clear-everything.
   static void clearEmbeddedData([Object? key = _clearWholeBag]) {
     if (identical(key, _clearWholeBag)) {
       EmbeddedDataStore.instance.clear();

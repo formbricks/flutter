@@ -53,10 +53,14 @@ class EmbeddedDataStore {
   /// `NaN`/`Infinity`, and the payload it would refuse is the whole survey's
   /// render options, so one bad value would cost the survey, not the field.
   void set(Map<String, Object?> values) {
+    final setKeys = <String>[];
+    final removedKeys = <String>[];
+
     for (final entry in values.entries) {
       final value = entry.value;
       if (value == null) {
         _data.remove(entry.key);
+        removedKeys.add(entry.key);
         continue;
       }
       if (value is num && !value.isFinite) {
@@ -77,17 +81,46 @@ class EmbeddedDataStore {
         continue;
       }
       _data[entry.key] = value;
+      setKeys.add(entry.key);
     }
+
+    _traceSet(setKeys, removedKeys);
+  }
+
+  /// A success trace, because the bag is otherwise invisible: it lives in memory
+  /// (nothing in `SharedPreferences` to inspect) and the API has no getter, so
+  /// without this line a host wiring up `setEmbeddedData` gets no confirmation
+  /// until a survey happens to display. Debug level, so it is silent unless
+  /// `setup` was given [LogLevel.debug].
+  ///
+  /// Keys only, never values: the documented use of this bag includes hashed
+  /// identity fields, and `Logger` is explicitly a no-PII channel.
+  void _traceSet(List<String> setKeys, List<String> removedKeys) {
+    final removed =
+        removedKeys.isEmpty ? '' : ', removed [${removedKeys.join(', ')}]';
+    Logger.debug(
+      'setEmbeddedData: set [${setKeys.join(', ')}]$removed — the bag now '
+      'holds [${_data.keys.join(', ')}]. Keys land on a response only if the '
+      'survey declares them as ingested Embedded Data fields.',
+    );
   }
 
   /// Removes one [key]. A key that is not set is a no-op.
   void remove(String key) {
     _data.remove(key);
+    Logger.debug(
+      'clearEmbeddedData: removed "$key" — the bag now holds '
+      '[${_data.keys.join(', ')}]',
+    );
   }
 
   /// Removes everything — logout, or a hard context switch.
   void clear() {
+    final clearedCount = _data.length;
     _data.clear();
+    Logger.debug(
+      'clearEmbeddedData: cleared the whole bag ($clearedCount keys)',
+    );
   }
 
   /// A detached, JSON-safe copy for the display-time snapshot: mutating the bag

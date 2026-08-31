@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
+import 'package:formbricks/src/survey/embedded_data.dart';
 import 'package:formbricks/src/survey/survey_store.dart';
 import 'package:formbricks/src/types/survey.dart';
 import 'package:formbricks/src/user/update_queue.dart';
@@ -150,6 +151,57 @@ void main() {
     Logger.resetInstance();
     SurveyStore.resetInstance();
     FormbricksConfig.resetInstance();
+    EmbeddedDataStore.instance.clear();
+  });
+
+  tearDown(EmbeddedDataStore.instance.clear);
+
+  group('the Embedded Data pipe', () {
+    // `_present` passing `hiddenFieldsRecord: EmbeddedDataStore.instance
+    // .snapshot()` is the single line joining the store, the render options and
+    // the renderer. The store, the options and the identity-clear are each
+    // tested in isolation elsewhere, so without these two the line could be
+    // deleted with every other test still green — and its failure mode is
+    // silent: the survey renders, the values just never arrive.
+    testWidgets('the display-time snapshot reaches the WebView html',
+        (tester) async {
+      await _seedConfig();
+      EmbeddedDataStore.instance.set({'plan': 'pro', 'screen': 'checkout'});
+
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      expect(
+        host.html,
+        contains('"hiddenFieldsRecord":{"plan":"pro","screen":"checkout"}'),
+      );
+    });
+
+    testWidgets('a value set during the delay still reaches the survey',
+        (tester) async {
+      // Pins "read at display, not at mount": the bag is empty when the widget
+      // mounts and only filled while the delay timer runs.
+      await _seedConfig();
+      final survey =
+          _survey({'id': 's1', 'delay': 2, 'languages': <dynamic>[]});
+      final host = _StubHost();
+      SurveyStore.instance.setSurvey(survey);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+        ),
+      );
+      await tester.pump(); // _start arms the timer
+      expect(host.html, isNull);
+
+      EmbeddedDataStore.instance.set({'plan': 'pro'});
+      await tester.pump(const Duration(seconds: 2)); // timer fires
+      await tester.pump(); // route push
+
+      expect(host.html, contains('"hiddenFieldsRecord":{"plan":"pro"}'));
+    });
   });
 
   testWidgets('presents a single-language survey immediately', (tester) async {

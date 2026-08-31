@@ -1,9 +1,26 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/formbricks.dart';
 import 'package:formbricks/src/common/logger.dart';
 import 'package:formbricks/src/survey/embedded_data.dart';
+
+/// Captures the lines `Logger` writes while [body] runs. `Logger` routes through
+/// `debugPrint`, which `flutter_test` lets us swap for the duration of a test.
+List<String> _captureLogs(void Function() body) {
+  final lines = <String>[];
+  final original = debugPrint;
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) lines.add(message);
+  };
+  try {
+    body();
+  } finally {
+    debugPrint = original;
+  }
+  return lines;
+}
 
 /// The Embedded Data bag (ENG-1844 / ENG-2472): host-supplied context attached
 /// to future responses without tying it to a trigger. These pin the contract all
@@ -186,6 +203,94 @@ void main() {
       // Deliberately unlike the queued methods: a host that pushes context at
       // launch must not have the value dropped because setup had not finished.
       Formbricks.setEmbeddedData({'plan': 'pro'});
+
+      expect(store.snapshot(), {'plan': 'pro'});
+    });
+  });
+
+  group('the debug success trace — the bag\'s only success feedback', () {
+    setUp(() => Logger.configure(level: LogLevel.debug));
+
+    test('a successful set logs the keys — keys only, never values', () {
+      final lines = _captureLogs(
+        () => Formbricks.setEmbeddedData({
+          'plan': 'pro',
+          'hashed_email': 's3cret-hash',
+        }),
+      );
+
+      expect(lines, hasLength(1));
+      expect(lines.single, contains('set [plan, hashed_email]'));
+      expect(lines.single, contains('the bag now holds [plan, hashed_email]'));
+      // The bag's documented use includes hashed identity fields; a value must
+      // never reach a log line.
+      expect(lines.single, isNot(contains('pro')));
+      expect(lines.single, isNot(contains('s3cret-hash')));
+    });
+
+    test('a null removal shows up as removed, not set', () {
+      Formbricks.setEmbeddedData({'plan': 'pro'});
+
+      final lines = _captureLogs(
+        () => Formbricks.setEmbeddedData({'plan': null, 'screen': 'checkout'}),
+      );
+
+      expect(lines.single, contains('set [screen]'));
+      expect(lines.single, contains('removed [plan]'));
+      expect(lines.single, contains('the bag now holds [screen]'));
+    });
+
+    test('a skipped value appears in neither list', () {
+      final lines = _captureLogs(
+        () => Formbricks.setEmbeddedData({'plan': 'pro', 'x': double.nan}),
+      );
+
+      // The refusal logs its own error line; the trace is the second.
+      expect(lines, hasLength(2));
+      expect(lines.last, contains('set [plan]'));
+      expect(lines.last, isNot(contains('[plan, x]')));
+    });
+
+    test('clearEmbeddedData traces both forms', () {
+      Formbricks.setEmbeddedData({'plan': 'pro', 'screen': 'product'});
+
+      final removedLines =
+          _captureLogs(() => Formbricks.clearEmbeddedData('plan'));
+      expect(removedLines.single, contains('removed "plan"'));
+      expect(removedLines.single, contains('the bag now holds [screen]'));
+
+      final clearedLines = _captureLogs(Formbricks.clearEmbeddedData);
+      expect(clearedLines.single, contains('cleared the whole bag (1 keys)'));
+    });
+
+    test('the trace is silent at the default error level', () {
+      Logger.resetInstance();
+
+      final lines = _captureLogs(
+        () => Formbricks.setEmbeddedData({'plan': 'pro'}),
+      );
+
+      expect(lines, isEmpty);
+    });
+  });
+
+  group('the clear-everything sentinel', () {
+    test('an outside const Object() cannot forge it', () {
+      // Dart canonicalizes const instances, so a `const Object()` sentinel would
+      // be identical to every `const Object()` in the program and this call
+      // would wipe the bag. The sentinel is a const instance of a private class
+      // instead, which host code cannot name.
+      Formbricks.setEmbeddedData({'plan': 'pro', 'screen': 'product'});
+
+      Formbricks.clearEmbeddedData(const Object());
+
+      expect(store.snapshot(), {'plan': 'pro', 'screen': 'product'});
+    });
+
+    test('a non-const Object() cannot forge it either', () {
+      Formbricks.setEmbeddedData({'plan': 'pro'});
+
+      Formbricks.clearEmbeddedData(Object());
 
       expect(store.snapshot(), {'plan': 'pro'});
     });
