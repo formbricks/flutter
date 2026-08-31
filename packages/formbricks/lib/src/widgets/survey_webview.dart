@@ -16,6 +16,7 @@ import '../common/config.dart';
 import '../common/filter_surveys.dart';
 import '../common/logger.dart';
 import '../common/utils.dart';
+import '../survey/embedded_data.dart';
 import '../survey/survey_store.dart';
 import '../types/config.dart';
 import '../types/survey.dart';
@@ -164,6 +165,11 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         clickOutside: overwrites?.clickOutsideClose ??
             _asBool(settings['clickOutsideClose']),
         overlay: overlay,
+        // Read here and nowhere else: `_present` runs when the survey is
+        // actually shown, after any configured delay, and the html it builds is
+        // handed to the WebView once. A value set after this point reaches the
+        // next response, never the one on screen.
+        hiddenFieldsRecord: EmbeddedDataStore.instance.snapshot(),
       ),
     );
 

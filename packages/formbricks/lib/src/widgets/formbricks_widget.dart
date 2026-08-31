@@ -13,6 +13,7 @@ import '../common/logger.dart';
 import '../common/result.dart';
 import '../common/setup.dart' as setup_internal;
 import '../survey/action.dart' as action;
+import '../survey/embedded_data.dart';
 import '../survey/survey_store.dart';
 import '../types/errors.dart';
 import '../types/survey.dart';
@@ -21,6 +22,22 @@ import '../user/user.dart' as user;
 import 'default_webview_host.dart';
 import 'survey_webview.dart';
 import 'webview_navigation.dart';
+
+/// The type of the "no argument" marker for [Formbricks.clearEmbeddedData].
+///
+/// Library-private on purpose. A default parameter value must be a
+/// compile-time constant, and Dart canonicalizes const instances — so a
+/// `const Object()` marker is `identical` to *every* `const Object()` in the
+/// program, and `clearEmbeddedData(const Object())` from host code would wipe
+/// the whole bag instead of being refused. Naming a private type is the one
+/// thing a caller outside this library cannot do, so a const instance of
+/// `_ClearWholeBag` is both a valid default value and unforgeable.
+class _ClearWholeBag {
+  const _ClearWholeBag();
+}
+
+/// The "no argument" marker for [Formbricks.clearEmbeddedData].
+const Object _clearWholeBag = _ClearWholeBag();
 
 /// The Formbricks SDK facade and drop-in host widget.
 ///
@@ -152,6 +169,66 @@ class Formbricks extends StatefulWidget {
       () => attribute.setLanguage(language),
       checkSetup: true,
     );
+  }
+
+  /// Attaches Embedded Data to future responses without tying it to a trigger.
+  ///
+  /// Merges into an in-memory bag — last write wins per key, and an explicit
+  /// `null` removes a key. Values land only on the survey's declared *ingested*
+  /// fields; anything else is dropped and logged by the survey renderer, never
+  /// fatal. Values must be a `String`, `num`, `bool` or `DateTime`.
+  ///
+  /// Deliberately synchronous and **not** routed through the command queue,
+  /// unlike the methods above: a host that pushes context at launch must not
+  /// have that value silently dropped because `setup` had not finished. The bag
+  /// is pure memory — nothing here needs the SDK to be running, and calling it
+  /// on every screen change is free.
+  ///
+  /// The bag is snapshotted when a survey is displayed and frozen for its
+  /// lifetime, so a value set while a survey is on screen reaches the *next*
+  /// response, not that one. It is never persisted: a cold app start begins
+  /// empty and the host re-pushes.
+  ///
+  /// ```dart
+  /// Formbricks.setEmbeddedData({'plan': 'pro', 'seats': 25});
+  /// Formbricks.setEmbeddedData({'screen': null}); // removes the key
+  /// ```
+  static void setEmbeddedData(Map<String, Object?> data) {
+    EmbeddedDataStore.instance.set(data);
+  }
+
+  /// Removes one Embedded Data key, or the whole bag when called with no
+  /// argument — logout, or a hard context switch.
+  ///
+  /// ```dart
+  /// Formbricks.clearEmbeddedData('plan'); // one key
+  /// Formbricks.clearEmbeddedData();       // everything
+  /// ```
+  ///
+  /// The [key] is typed `Object?` around a private sentinel rather than as a
+  /// plain `String?`, so that "called with no argument" and "called with a key
+  /// that evaluated to null" stay different things — the same distinction the
+  /// JS SDK draws by argument count. A host that reads the key from its own
+  /// state (`clearEmbeddedData(prefs['fieldToClear'])`) must not wipe the whole
+  /// bag when that state is empty; that call is a logged no-op.
+  ///
+  /// The sentinel is a const instance of the private [_ClearWholeBag] rather
+  /// than a `const Object()`: const instances are canonicalized, so the latter
+  /// would make `clearEmbeddedData(const Object())` from host code an accidental
+  /// clear-everything.
+  static void clearEmbeddedData([Object? key = _clearWholeBag]) {
+    if (identical(key, _clearWholeBag)) {
+      EmbeddedDataStore.instance.clear();
+      return;
+    }
+    if (key is! String) {
+      Logger.error(
+        'clearEmbeddedData: expected a field name — nothing was cleared '
+        '(call with no argument to clear everything)',
+      );
+      return;
+    }
+    EmbeddedDataStore.instance.remove(key);
   }
 
   /// Logs the current user out, resetting user state to anonymous

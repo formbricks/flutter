@@ -28,6 +28,7 @@ class SurveyHtmlOptions {
     this.placement,
     this.clickOutside,
     this.overlay,
+    this.hiddenFieldsRecord = const <String, Object>{},
   });
 
   /// The survey to render.
@@ -60,6 +61,13 @@ class SurveyHtmlOptions {
   /// Overlay mode, when set.
   final String? overlay;
 
+  /// The Embedded Data bag, snapshotted when the survey is displayed and frozen
+  /// for its life. Passed raw and unfiltered: the ingest contract (allow-list,
+  /// coercion, `locked`, size caps) lives in the renderer, so all four mobile
+  /// SDKs inherit the same rules without each shipping a copy, and the server
+  /// re-runs all of it on ingest.
+  final Map<String, Object> hiddenFieldsRecord;
+
   /// The `renderSurvey` options object.
   Map<String, dynamic> toRenderOptions() => {
         'workspaceId': workspaceId,
@@ -73,6 +81,7 @@ class SurveyHtmlOptions {
         if (clickOutside != null) 'clickOutside': clickOutside,
         if (overlay != null) 'overlay': overlay,
         'isWebEnvironment': false,
+        'hiddenFieldsRecord': hiddenFieldsRecord,
       };
 }
 

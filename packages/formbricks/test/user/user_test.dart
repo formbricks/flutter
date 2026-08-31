@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/src/common/api_client.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
+import 'package:formbricks/src/survey/embedded_data.dart';
 import 'package:formbricks/src/user/update_queue.dart';
 import 'package:formbricks/src/user/user.dart';
 import 'package:http/http.dart' as http;
@@ -170,6 +171,59 @@ void main() {
         ['plain'],
         reason: 'segment-filtered surveys drop after logout',
       );
+    });
+  });
+
+  /// The ambient Embedded Data bag survives a survey, so it has to be cleared
+  /// where identity changes — otherwise one user's context rides onto the next
+  /// user's responses on a shared device. Deliberately NOT cleared on first
+  /// identification: a host legitimately pushes context before it knows who the
+  /// user is.
+  group('Embedded Data bag on identity change', () {
+    final store = EmbeddedDataStore.instance;
+
+    setUp(store.clear);
+    tearDown(store.clear);
+
+    test('switching to a different userId clears the bag', () async {
+      final config = await _seed(userId: 'old');
+      final queue = UpdateQueue.instance
+        ..configOverride = config
+        ..apiClientOverride = _noopApi();
+      store.set({'plan': 'pro'});
+
+      await setUserId('new', config: config, queue: queue);
+
+      expect(store.snapshot(), isEmpty);
+    });
+
+    test('identifying for the first time keeps the bag', () async {
+      final config = await _seed();
+      final queue = UpdateQueue.instance..configOverride = config;
+      store.set({'plan': 'pro'});
+
+      await setUserId('u1', config: config, queue: queue);
+
+      expect(store.snapshot(), {'plan': 'pro'});
+    });
+
+    test('setting the same userId again keeps the bag', () async {
+      final config = await _seed(userId: 'u1');
+      final queue = UpdateQueue.instance..configOverride = config;
+      store.set({'plan': 'pro'});
+
+      await setUserId('u1', config: config, queue: queue);
+
+      expect(store.snapshot(), {'plan': 'pro'});
+    });
+
+    test('logout clears the bag', () async {
+      final config = await _seed(userId: 'u1');
+      store.set({'plan': 'pro'});
+
+      await logout(config: config);
+
+      expect(store.snapshot(), isEmpty);
     });
   });
 }

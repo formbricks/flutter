@@ -20,6 +20,7 @@ SurveyHtmlOptions _opts({
   bool branding = true,
   String languageCode = 'default',
   String? contactId,
+  Map<String, Object> hiddenFieldsRecord = const <String, Object>{},
 }) =>
     SurveyHtmlOptions(
       survey: survey ?? _survey(),
@@ -32,6 +33,7 @@ SurveyHtmlOptions _opts({
       clickOutside: clickOutside,
       overlay: overlay,
       contactId: contactId,
+      hiddenFieldsRecord: hiddenFieldsRecord,
     );
 
 void main() {
@@ -170,6 +172,34 @@ void main() {
       final html = buildSurveyHtml(_opts(appUrl: 'ftp://x.com'));
       expect(html, isNot(contains('renderSurvey')));
       expect(html, contains('Formbricks WebView Survey'));
+    });
+  });
+
+  group('hiddenFieldsRecord', () {
+    test('rides the render options raw, including keys the survey ignores', () {
+      // The Embedded Data bag (ENG-1844/2472) uses the options blob that already
+      // exists — no new bridge message. The SDK does no filtering of its own:
+      // the renderer owns the allow-list, so an undeclared key must survive the
+      // trip and be dropped there, not here.
+      final html = buildSurveyHtml(
+        _opts(
+          hiddenFieldsRecord: const {
+            'plan': 'pro',
+            'notDeclaredBySurvey': 'kept — the renderer decides, not the SDK',
+          },
+        ),
+      );
+
+      expect(html, contains('"hiddenFieldsRecord":{'));
+      expect(html, contains('"plan":"pro"'));
+      expect(html, contains('"notDeclaredBySurvey"'));
+    });
+
+    test('is an empty object when the host set nothing', () {
+      expect(
+        buildSurveyHtml(_opts()),
+        contains('"hiddenFieldsRecord":{}'),
+      );
     });
   });
 }
