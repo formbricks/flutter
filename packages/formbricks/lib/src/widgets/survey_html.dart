@@ -153,12 +153,18 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
       var fbGeometryRaf = null;
       var fbGeometryStable = 0;
       function fbCardRect() {
-        // The survey card is the single modal dialog the runtime renders inside
-        // its #fbjs container (survey-container.tsx). Scoped + both attributes
-        // so we never grab the full-screen #fbjs wrapper (that would defeat
-        // box-none) or a future nested dialog. querySelector returns the
-        // outermost match in document order, i.e. the card itself.
-        var el = document.querySelector('#fbjs [role="dialog"][aria-modal="true"]');
+        // The survey card is the single dialog the runtime renders inside its
+        // #fbjs container (survey-container.tsx). Scoped to #fbjs so we never
+        // grab the full-screen wrapper (that would defeat box-none);
+        // querySelector returns the outermost match in document order, i.e.
+        // the card itself.
+        //
+        // Deliberately NOT matched on aria-modal. The runtime sets that
+        // attribute only when the survey has a backdrop (ENG-2304), so
+        // requiring it matched nothing in exactly the no-overlay case this
+        // mask exists for -- the rect stayed null and the card became
+        // untappable. Match on role alone: it is on the card in every mode.
+        var el = document.querySelector('#fbjs [role="dialog"]');
         if (!el) return null;
         var r = el.getBoundingClientRect();
         if (r.width <= 0 || r.height <= 0) return null;
