@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1
+
+- Fix survey cards being untappable when the survey has no backdrop. The
+  card-geometry probe required `aria-modal`, which the surveys runtime now sets
+  only for surveys that have one. With no rect to work from, the pointer mask
+  rejected touches across the whole WebView instead of only outside the card.
+  The runtime is served at render time, so hosts on a current server hit this
+  without changing SDK version.
+
 ## 1.1.0
 
 - Support survey-interaction segment filters: segments that target contacts by
