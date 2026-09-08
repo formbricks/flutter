@@ -14,7 +14,7 @@ workspace:
   - apps/playground
 
 dev_dependencies:
-  melos: ^7.8.2
+  melos: ^8.6.0
 
 # Melos 7 builds on Dart's native pub workspaces (the `workspace:` key above).
 # It adds cross-package scripting: run analyze / test / format across every
