@@ -3,7 +3,7 @@ publish_to: none
 
 # Root of the Formbricks Flutter monorepo.
 # This package is never published; it only declares the pub workspace
-# (Dart 3.6+ / Melos 7) that ties the SDK package and demo app together
+# (Dart 3.6+ / Melos 8) that ties the SDK package and demo app together
 # under a single resolved dependency graph + lockfile.
 environment:
   sdk: ^3.12.0
@@ -16,7 +16,7 @@ workspace:
 dev_dependencies:
   melos: ^8.6.0
 
-# Melos 7 builds on Dart's native pub workspaces (the `workspace:` key above).
+# Melos 8 builds on Dart's native pub workspaces (the `workspace:` key above).
 # It adds cross-package scripting: run analyze / test / format across every
 # package with one command. Used locally and in CI.
 melos:
@@ -43,16 +43,18 @@ melos:
 
     test:
       description: Run tests in every package that has a test/ dir.
-      run: flutter test
+      # Melos 8 made `run` and `exec` mutually exclusive — the command an
+      # exec script runs now lives under `exec.command`.
       exec:
+        command: flutter test
         concurrency: 1
       packageFilters:
         dirExists: test
 
     test-coverage:
       description: Run tests with coverage in every package that has tests.
-      run: flutter test --coverage
       exec:
+        command: flutter test --coverage
         concurrency: 1
       packageFilters:
         dirExists: test

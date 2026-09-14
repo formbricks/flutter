@@ -116,12 +116,12 @@ A standard `packages/*` + `apps/*` monorepo split.
 
 ## Monorepo tooling
 
-Uses **Dart pub workspaces** (Dart ≥ 3.6) + **[Melos](https://melos.invertase.dev) 7**.
+Uses **Dart pub workspaces** (Dart ≥ 3.6) + **[Melos](https://melos.invertase.dev) 8**.
 
 - The root `pubspec.yaml` declares `workspace:` members. Each member sets
   `resolution: workspace`, so the whole repo shares **one** lockfile and one
   resolved dependency graph — no version drift between SDK and demo app.
-- Melos 7 sits on top of native workspaces and adds cross-package scripts
+- Melos 8 sits on top of native workspaces and adds cross-package scripts
   (analyze / test / format across everything at once). Its config lives under
   the `melos:` key in the root `pubspec.yaml` (Melos 7 dropped `melos.yaml`).
 
