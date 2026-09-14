@@ -116,7 +116,11 @@ A standard `packages/*` + `apps/*` monorepo split.
 
 ## Monorepo tooling
 
-Uses **Dart pub workspaces** (Dart ≥ 3.6) + **[Melos](https://melos.invertase.dev) 8**.
+Uses **Dart pub workspaces** + **[Melos](https://melos.invertase.dev) 8**.
+Developing in this repo needs **Dart ≥ 3.12** (the root `pubspec.yaml`
+constraint). The published `formbricks` package keeps a lower floor of
+Dart ≥ 3.6 / Flutter ≥ 3.27 for consumers — workspaces need Dart ≥ 3.6 and
+Melos 8.6.0 needs Dart ≥ 3.9, so the repo constraint is the binding one.
 
 - The root `pubspec.yaml` declares `workspace:` members. Each member sets
   `resolution: workspace`, so the whole repo shares **one** lockfile and one

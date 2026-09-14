@@ -3,8 +3,13 @@ publish_to: none
 
 # Root of the Formbricks Flutter monorepo.
 # This package is never published; it only declares the pub workspace
-# (Dart 3.6+ / Melos 8) that ties the SDK package and demo app together
-# under a single resolved dependency graph + lockfile.
+# (Melos 8) that ties the SDK package and demo app together under a single
+# resolved dependency graph + lockfile.
+#
+# Working in this repo needs Dart 3.12+ (the `sdk` constraint below). That is
+# stricter than what the pieces themselves require — pub workspaces need
+# Dart 3.6+ and Melos 8.6.0 needs Dart 3.9+ — and stricter than the published
+# `formbricks` package, which keeps a Dart 3.6 / Flutter 3.27 floor.
 environment:
   sdk: ^3.12.0
 
