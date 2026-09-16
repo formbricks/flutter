@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.0
+
+- Add `Formbricks.setEmbeddedData()` and `Formbricks.clearEmbeddedData()`: attach
+  context to future responses without tying it to a trigger. Values merge into an
+  in-memory bag (last write wins per key, `null` removes a key), are snapshotted
+  when a survey is shown, and land only on fields the survey declares as ingested
+  Embedded Data. Typed fields, defaults and locking need a Formbricks server on
+  6.0 or later; older servers treat the values as plain hidden fields.
+- Includes the 1.1.1 fix below, which shipped from a release branch and was not
+  yet listed here.
+
+## 1.1.1
+
+- Fix survey cards being untappable when the survey has no backdrop. The
+  card-geometry probe required `aria-modal`, which the surveys runtime now sets
+  only for surveys that have one. With no rect to work from, the pointer mask
+  rejected touches across the whole WebView instead of only outside the card.
+  The runtime is served at render time, so hosts on a current server hit this
+  without changing SDK version.
+
 ## 1.1.0
 
 - Support survey-interaction segment filters: segments that target contacts by
