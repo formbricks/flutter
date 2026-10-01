@@ -23,6 +23,7 @@ import '../types/survey.dart';
 import '../user/interaction_refresh.dart';
 import 'default_webview_host.dart';
 import 'survey_html.dart';
+import 'survey_touch_region.dart';
 import 'webview_event.dart';
 import 'webview_navigation.dart';
 
@@ -75,7 +76,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   // placements keep the full-screen modal route (the backdrop *should* block).
   OverlayEntry? _overlayEntry;
   bool _hasOverlay = false;
-  final ValueNotifier<Rect?> _cardRect = ValueNotifier<Rect?>(null);
+  // Starts at `everything`, so the SDK blocks pointers exactly as it used to
+  // until the renderer tells us where the card is. See [SurveyTouchRegion].
+  final ValueNotifier<SurveyTouchRegion> _touchRegion =
+      ValueNotifier<SurveyTouchRegion>(SurveyTouchRegion.everything);
 
   // Serializes config read-modify-writes so back-to-back events (e.g. response
   // then close) can't clobber each other.
@@ -249,9 +253,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
         // WebView as `child` keeps its controller alive across geometry updates.
         if (_hasOverlay) return webView;
-        return ValueListenableBuilder<Rect?>(
-          valueListenable: _cardRect,
-          builder: (_, rect, child) => _PointerMask(rect: rect, child: child!),
+        return ValueListenableBuilder<SurveyTouchRegion>(
+          valueListenable: _touchRegion,
+          builder: (_, region, child) =>
+              _PointerMask(region: region, child: child!),
           child: webView,
         );
       },
@@ -274,7 +279,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       case CloseEvent():
         _closeSurvey();
       case GeometryEvent(:final rect):
-        _cardRect.value = rect;
+        _touchRegion.value = SurveyTouchRegion.forReported(rect);
       case ConsoleEvent(:final log):
         Logger.debug('[Console] $log');
     }
@@ -389,7 +394,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // presentation via captured handles (no live BuildContext required). The
     // guards make removal idempotent if it was already dismissed.
     _dismissPresentation();
-    _cardRect.dispose();
+    _touchRegion.dispose();
     super.dispose();
   }
 
@@ -406,36 +411,35 @@ bool? _asBool(Object? value) => value is bool ? value : null;
 /// (the host app). This is how the SDK achieves RN's `pointerEvents="box-none"`
 /// for a full-bleed platform WebView, which otherwise hit-tests its whole area.
 class _PointerMask extends SingleChildRenderObjectWidget {
-  const _PointerMask({required this.rect, required super.child});
+  const _PointerMask({required this.region, required super.child});
 
-  final Rect? rect;
+  final SurveyTouchRegion region;
 
   @override
   _RenderPointerMask createRenderObject(BuildContext context) =>
-      _RenderPointerMask(rect);
+      _RenderPointerMask(region);
 
   @override
   void updateRenderObject(
     BuildContext context,
     _RenderPointerMask renderObject,
   ) {
-    renderObject.rect = rect;
+    renderObject.region = region;
   }
 }
 
 class _RenderPointerMask extends RenderProxyBox {
-  _RenderPointerMask(this._rect);
+  _RenderPointerMask(this._region);
 
-  Rect? _rect;
-  set rect(Rect? value) {
-    if (value == _rect) return;
-    _rect = value;
+  SurveyTouchRegion _region;
+  set region(SurveyTouchRegion value) {
+    if (value == _region) return;
+    _region = value;
   }
 
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
-    final rect = _rect;
-    if (rect == null || !rect.contains(position)) return false;
+    if (!_region.accepts(position)) return false;
     return super.hitTest(result, position: position);
   }
 }

@@ -153,63 +153,21 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
       function getSetIsResponseSendingFinished() { /* noop */ };
       function getSetIsError() { /* noop */ };
 
-      // Reports the survey card's bounding rect (CSS px, viewport-relative) to
-      // the host so it can pass touches outside the card through to the app
-      // (box-none). The native WebView hit-tests its whole rectangle and ignores
-      // the page's `pointer-events:none`, so the host masks pointers itself and
-      // needs the card geometry to know where the card is.
-      var fbLastGeometry = '';
-      var fbGeometryRaf = null;
-      var fbGeometryStable = 0;
-      function fbCardRect() {
-        // The survey card is the single dialog the runtime renders inside its
-        // #fbjs container (survey-container.tsx). Scoped to #fbjs so we never
-        // grab the full-screen wrapper (that would defeat box-none);
-        // querySelector returns the outermost match in document order, i.e.
-        // the card itself.
-        //
-        // Deliberately NOT matched on aria-modal. The runtime sets that
-        // attribute only when the survey has a backdrop (ENG-2304), so
-        // requiring it matched nothing in exactly the no-overlay case this
-        // mask exists for -- the rect stayed null and the card became
-        // untappable. Match on role alone: it is on the card in every mode.
-        var el = document.querySelector('#fbjs [role="dialog"]');
-        if (!el) return null;
-        var r = el.getBoundingClientRect();
-        if (r.width <= 0 || r.height <= 0) return null;
-        return { x: r.left, y: r.top, width: r.width, height: r.height };
-      }
-      function fbGeometryTick() {
-        var rect = fbCardRect();
-        var key = rect
-          ? [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)].join(',')
-          : 'null';
-        if (key !== fbLastGeometry) {
-          fbLastGeometry = key;
-          fbGeometryStable = 0;
-          postFormbricksMessage({ type: 'Geometry', data: rect });
-        } else {
-          fbGeometryStable++;
-        }
-        // Idle once the rect has been stable for ~1.5s (open/step animations
-        // settle); observers below restart the loop on any later change.
-        if (fbGeometryStable > 90) { fbGeometryRaf = null; return; }
-        fbGeometryRaf = window.requestAnimationFrame(fbGeometryTick);
-      }
-      function fbEnsureGeometryLoop() {
-        if (fbGeometryRaf == null) {
-          fbGeometryStable = 0;
-          fbGeometryRaf = window.requestAnimationFrame(fbGeometryTick);
-        }
-      }
-      function fbObserveGeometry() {
-        try {
-          var mo = new MutationObserver(fbEnsureGeometryLoop);
-          mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-        } catch (e) {}
-        window.addEventListener('resize', fbEnsureGeometryLoop);
-        window.addEventListener('orientationchange', fbEnsureGeometryLoop);
-      }
+      // Where the survey card is, so the host can pass pointers outside it through
+      // to the app. The renderer measures and calls this (ENG-3155); `rect` is
+      // null when no card is on screen.
+      //
+      // This used to be scraped out of the DOM here. A correct a11y fix upstream
+      // moved the attribute that probe matched on, the rect went null forever and
+      // the card became untappable — with nothing to catch it, because a selector
+      // in a string has no compile step and the renderer is fetched at runtime.
+      //
+      // Only a renderer from Formbricks 6.0+ calls this. Against an older
+      // self-hosted server it never fires, and the mask stays at
+      // SurveyTouchRegion.everything — exactly how the SDK behaved before.
+      function onCardRectChange(rect) {
+        postFormbricksMessage({ type: 'Geometry', data: rect });
+      };
 
       let closedForError = false;
       function closeOnError(message, error) {
@@ -228,6 +186,7 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
             onResponseCreated,
             onFinished,
             onClose,
+            onCardRectChange,
             getSetIsResponseSendingFinished,
             getSetIsError,
           };
@@ -238,8 +197,6 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
             return;
           }
           runtime.renderSurvey(surveyProps);
-          fbObserveGeometry();
-          fbEnsureGeometryLoop();
         } catch (error) {
           closeOnError('Failed to render Formbricks survey:', error);
         }

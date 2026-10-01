@@ -634,15 +634,44 @@ void main() {
       expect(r.host.taps, 1, reason: 'inside-card tap hits the WebView');
     });
 
-    testWidgets('non-overlay before geometry arrives: every tap passes through',
+    testWidgets('non-overlay before geometry arrives: the survey takes the tap',
         (tester) async {
       await _seedConfig();
       final r = await presentOver(
         tester,
         _survey({'id': 's1', 'languages': <dynamic>[]}),
       );
-      // No GeometryEvent yet → nothing is interactive.
+      // No GeometryEvent yet, which happens for the whole of a survey's life
+      // against a server whose renderer predates `onCardRectChange`. The SDK has
+      // to keep taking every pointer, exactly as it did before the mask existed.
+      //
+      // This used to assert the opposite — that everything fell through — and
+      // that is the bug: a survey rendered by an older server was visible but
+      // completely untappable.
       await tester.tapAt(const Offset(50, 50));
+      await tester.pump();
+
+      expect(r.hostTaps(), 0, reason: 'the host must not get the tap');
+      expect(r.host.taps, 1, reason: 'the survey must stay usable');
+    });
+
+    testWidgets('non-overlay after the card leaves: taps pass through again',
+        (tester) async {
+      await _seedConfig();
+      final r = await presentOver(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      r.host.onEvent!(const GeometryEvent(Rect.fromLTWH(0, 0, 100, 100)));
+      await tester.pump();
+
+      // The renderer reports the card's absence while it animates out, a full
+      // second before the close arrives. Without acting on it the SDK leaves a
+      // dead patch over a host app that looks perfectly usable.
+      r.host.onEvent!(const GeometryEvent(null));
+      await tester.pump();
+
+      await tester.tapAt(const Offset(50, 50)); // where the card used to be
       await tester.pump();
 
       expect(r.hostTaps(), 1);
