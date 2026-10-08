@@ -131,10 +131,18 @@ class AppearanceScope extends InheritedNotifier<ValueNotifier<String>> {
   const AppearanceScope({
     super.key,
     required ValueNotifier<String> appearance,
+    this.initial,
     required super.child,
   }) : super(notifier: appearance);
+
+  /// The value baked into the survey page when it was built.
+  final String? initial;
 
   /// The nearest resolved-appearance notifier, if any.
   static ValueNotifier<String>? maybeOf(BuildContext context) =>
       context.getInheritedWidgetOfExactType<AppearanceScope>()?.notifier;
+
+  /// The value the page was built with, if any.
+  static String? initialOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<AppearanceScope>()?.initial;
 }

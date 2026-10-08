@@ -209,6 +209,7 @@ String buildSurveyHtml(SurveyHtmlOptions options) {
             return;
           }
           runtime.renderSurvey(surveyProps);
+          postFormbricksMessage({ onSurveyRendered: true });
         } catch (error) {
           closeOnError('Failed to render Formbricks survey:', error);
         }

@@ -84,6 +84,8 @@ class _SurveyWebViewState extends State<SurveyWebView> {
 
   // The resolved appearance of the open survey. The default host watches it.
   final ValueNotifier<String> _appearance = ValueNotifier<String>('light');
+  // The value [_start] baked into the page; the host diffs changes against it.
+  String? _frozenAppearance;
 
   // Serializes config read-modify-writes so back-to-back events (e.g. response
   // then close) can't clobber each other.
@@ -182,6 +184,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // [_appearance] and the host's `runJavaScript`.
     _appearance.value =
         resolveAppearance(context, AppearanceState.instance.current);
+    _frozenAppearance = _appearance.value;
     final html = buildSurveyHtml(
       SurveyHtmlOptions(
         survey: widget.survey,
@@ -266,6 +269,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // keyboard show/hide.
     return AppearanceScope(
       appearance: _appearance,
+      initial: _frozenAppearance,
       child: Builder(
         builder: (ctx) {
           final webView = Padding(
@@ -299,6 +303,9 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   void _onEvent(WebViewEvent event) {
     if (!mounted) return;
     switch (event) {
+      case SurveyRenderedEvent():
+        // Consumed by the WebView host, which flushes any held appearance change.
+        break;
       case DisplayCreatedEvent():
         _enqueueConfigOp(_recordDisplay);
         _refreshSegmentsOnce(InteractionSource.onDisplay);

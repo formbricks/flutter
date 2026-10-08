@@ -110,6 +110,16 @@ void main() {
       );
     });
 
+    test('reports the render once renderSurvey has returned', () {
+      final html = buildSurveyHtml(_opts());
+      final render = html.indexOf('runtime.renderSurvey(surveyProps);');
+      final rendered =
+          html.indexOf('postFormbricksMessage({ onSurveyRendered: true })');
+
+      expect(render, isNonNegative);
+      expect(rendered, greaterThan(render));
+    });
+
     test('console bridge forwards multiple log arguments', () {
       final html = buildSurveyHtml(_opts());
 

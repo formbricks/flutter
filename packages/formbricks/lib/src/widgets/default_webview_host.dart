@@ -76,6 +76,8 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
   late final WebViewController _controller;
   ValueNotifier<String>? _appearance;
   String? _appliedAppearance;
+  // No `formbricksSurveys.setAppearance` exists until the survey has rendered.
+  bool _surveyRendered = false;
 
   @override
   void didChangeDependencies() {
@@ -85,11 +87,12 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
     _appearance?.removeListener(_onAppearanceChanged);
     _appearance = next;
     // The page already opened with this value; only a change is sent.
-    _appliedAppearance = next?.value;
+    _appliedAppearance = AppearanceScope.initialOf(context) ?? next?.value;
     next?.addListener(_onAppearanceChanged);
   }
 
   void _onAppearanceChanged() {
+    if (!_surveyRendered) return; // hold until the renderer exists
     final resolved = _appearance?.value;
     if (resolved == null || resolved == _appliedAppearance) return;
     _appliedAppearance = resolved;
@@ -127,6 +130,11 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
         'Formbricks',
         onMessageReceived: (JavaScriptMessage message) {
           for (final event in parseWebViewEvents(message.message)) {
+            if (event is SurveyRenderedEvent) {
+              _surveyRendered = true;
+              _onAppearanceChanged(); // sends only if it changed while loading
+              continue;
+            }
             widget.onEvent(event);
           }
         },
