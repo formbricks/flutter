@@ -75,8 +75,12 @@ void main() {
         (tester) async {
       Widget darkApp(Widget c) => MaterialApp(theme: ThemeData.dark(), home: c);
       expect(
-        await resolveIn(tester, FormbricksAppearance.system,
-            wrap: darkApp, platform: Brightness.light,),
+        await resolveIn(
+          tester,
+          FormbricksAppearance.system,
+          wrap: darkApp,
+          platform: Brightness.light,
+        ),
         'dark',
       );
     });
@@ -90,8 +94,12 @@ void main() {
             home: c,
           );
       expect(
-        await resolveIn(tester, FormbricksAppearance.system,
-            wrap: lightApp, platform: Brightness.dark,),
+        await resolveIn(
+          tester,
+          FormbricksAppearance.system,
+          wrap: lightApp,
+          platform: Brightness.dark,
+        ),
         'light',
       );
     });

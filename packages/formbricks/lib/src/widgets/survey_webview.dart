@@ -106,9 +106,12 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // The app's theme changed (`system` follows it). Reading the theme in
-    // [resolveAppearance] subscribes this State to it.
-    if (_phase == _SurveyPhase.presenting) _syncAppearance();
+    // The app's theme changed (`system` follows it); reading the theme in
+    // [resolveAppearance] subscribed this State to it. Notifying the scope here
+    // would mark it dirty during build, so it waits for the frame to finish.
+    if (_phase == _SurveyPhase.presenting) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncAppearance());
+    }
   }
 
   void _syncAppearance() {
@@ -262,34 +265,35 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // Builder so the keyboard inset is read in a context that rebuilds on
     // keyboard show/hide.
     return AppearanceScope(
-        appearance: _appearance,
-        child: Builder(
-          builder: (ctx) {
-            final webView = Padding(
-              padding:
-                  EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-              child: builder(
-                ctx,
-                html: html,
-                appUrl: appUrl,
-                onEvent: _onEvent,
-                launch: widget.launch,
-                onLoadError: _handleWebViewLoadError,
-              ),
-            );
-            // Backdrop placements fill and block the screen. Non-overlay placements
-            // only accept pointers within the reported card rect; the WebView paints
-            // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
-            // WebView as `child` keeps its controller alive across geometry updates.
-            if (_hasOverlay) return webView;
-            return ValueListenableBuilder<SurveyTouchRegion>(
-              valueListenable: _touchRegion,
-              builder: (_, region, child) =>
-                  _PointerMask(region: region, child: child!),
-              child: webView,
-            );
-          },
-        ),);
+      appearance: _appearance,
+      child: Builder(
+        builder: (ctx) {
+          final webView = Padding(
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            child: builder(
+              ctx,
+              html: html,
+              appUrl: appUrl,
+              onEvent: _onEvent,
+              launch: widget.launch,
+              onLoadError: _handleWebViewLoadError,
+            ),
+          );
+          // Backdrop placements fill and block the screen. Non-overlay placements
+          // only accept pointers within the reported card rect; the WebView paints
+          // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
+          // WebView as `child` keeps its controller alive across geometry updates.
+          if (_hasOverlay) return webView;
+          return ValueListenableBuilder<SurveyTouchRegion>(
+            valueListenable: _touchRegion,
+            builder: (_, region, child) =>
+                _PointerMask(region: region, child: child!),
+            child: webView,
+          );
+        },
+      ),
+    );
   }
 
   void _onEvent(WebViewEvent event) {

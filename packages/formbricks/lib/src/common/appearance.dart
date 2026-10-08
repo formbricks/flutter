@@ -50,7 +50,8 @@ class AppearanceState extends ChangeNotifier {
     final parsed = FormbricksAppearance.tryParse(value);
     if (parsed == null) {
       Logger.error(
-          'setAppearance: unknown appearance "$value", falling back to light',);
+        'setAppearance: unknown appearance "$value", falling back to light',
+      );
     }
     _current = parsed ?? FormbricksAppearance.light;
     notifyListeners();

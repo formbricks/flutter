@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:formbricks/src/common/appearance.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
 import 'package:formbricks/src/survey/embedded_data.dart';
@@ -21,6 +22,7 @@ class _StubHost {
   void Function(WebViewEvent)? onEvent;
   VoidCallback? onLoadError;
   String? html;
+  ValueNotifier<String>? appearance;
 
   Widget build(
     BuildContext context, {
@@ -30,6 +32,7 @@ class _StubHost {
     LaunchUrlFn? launch,
     VoidCallback? onLoadError,
   }) {
+    appearance = AppearanceScope.maybeOf(context);
     this.onEvent = onEvent;
     this.onLoadError = onLoadError;
     this.html = html;
@@ -155,6 +158,91 @@ void main() {
   });
 
   tearDown(EmbeddedDataStore.instance.clear);
+
+  group('appearance and custom CSS', () {
+    setUp(AppearanceState.instance.reset);
+    tearDown(AppearanceState.instance.reset);
+
+    testWidgets('opens light by default and sends no customCss key',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      expect(host.html, contains('"appearance":"light"'));
+      expect(host.html, isNot(contains('customCss')));
+      expect(host.appearance?.value, 'light');
+    });
+
+    testWidgets('opens in the appearance set before display, with the CSS',
+        (tester) async {
+      await _seedConfig(
+        settings: {
+          'customCss': {'dark': '.w{color:red}'},
+        },
+      );
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      final host = await _present(
+        tester,
+        _survey({
+          'id': 's1',
+          'languages': <dynamic>[],
+          'customCss': {'light': '.s{margin:0}'},
+        }),
+      );
+
+      expect(host.html, contains('"appearance":"dark"'));
+      expect(
+        host.html,
+        contains(
+          '"customCss":{"workspace":{"dark":".w{color:red}"},'
+          '"survey":{"light":".s{margin:0}"}}',
+        ),
+      );
+    });
+
+    testWidgets('a change while open reaches the host without a reload',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      final openedWith = host.html;
+
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      await tester.pump();
+
+      expect(host.appearance?.value, 'dark');
+      // The page itself is frozen: reloading it would lose the answers.
+      expect(host.html, openedWith);
+    });
+
+    testWidgets('system follows the app theme live', (tester) async {
+      await _seedConfig();
+      AppearanceState.instance.set(FormbricksAppearance.system);
+      final survey = _survey({'id': 's1', 'languages': <dynamic>[]});
+      final host = _StubHost();
+      SurveyStore.instance.setSurvey(survey);
+      Widget app(ThemeMode mode) => MaterialApp(
+            themeMode: mode,
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+          );
+
+      await tester.pumpWidget(app(ThemeMode.light));
+      await tester.pump();
+      await tester.pump();
+      expect(host.appearance?.value, 'light');
+
+      await tester.pumpWidget(app(ThemeMode.dark));
+      await tester.pumpAndSettle();
+      expect(host.appearance?.value, 'dark');
+    });
+  });
 
   group('the Embedded Data pipe', () {
     // `_present` passing `hiddenFieldsRecord: EmbeddedDataStore.instance
