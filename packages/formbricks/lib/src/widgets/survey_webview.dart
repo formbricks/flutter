@@ -12,6 +12,7 @@ import 'package:clock/clock.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../common/appearance.dart';
 import '../common/config.dart';
 import '../common/filter_surveys.dart';
 import '../common/logger.dart';
@@ -81,6 +82,9 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   final ValueNotifier<SurveyTouchRegion> _touchRegion =
       ValueNotifier<SurveyTouchRegion>(SurveyTouchRegion.everything);
 
+  // The resolved appearance of the open survey. The default host watches it.
+  final ValueNotifier<String> _appearance = ValueNotifier<String>('light');
+
   // Serializes config read-modify-writes so back-to-back events (e.g. response
   // then close) can't clobber each other.
   Future<void> _configOps = Future<void>.value();
@@ -94,8 +98,23 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   @override
   void initState() {
     super.initState();
+    AppearanceState.instance.addListener(_syncAppearance);
     // All store mutations / route pushes happen post-frame, never during build.
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The app's theme changed (`system` follows it). Reading the theme in
+    // [resolveAppearance] subscribes this State to it.
+    if (_phase == _SurveyPhase.presenting) _syncAppearance();
+  }
+
+  void _syncAppearance() {
+    if (!mounted || _phase != _SurveyPhase.presenting) return;
+    _appearance.value =
+        resolveAppearance(context, AppearanceState.instance.current);
   }
 
   void _start() {
@@ -156,6 +175,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     // A backdrop ("dark"/"light") is a real modal: it should block the host. No
     // overlay (or "none") is a corner/inline card and must be box-none.
     _hasOverlay = overlay != null && overlay != 'none';
+    // Frozen into the page here; later changes reach the open survey through
+    // [_appearance] and the host's `runJavaScript`.
+    _appearance.value =
+        resolveAppearance(context, AppearanceState.instance.current);
     final html = buildSurveyHtml(
       SurveyHtmlOptions(
         survey: widget.survey,
@@ -174,6 +197,9 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         // handed to the WebView once. A value set after this point reaches the
         // next response, never the one on screen.
         hiddenFieldsRecord: EmbeddedDataStore.instance.snapshot(),
+        appearance: _appearance.value,
+        customCss:
+            buildCustomCss(settings['customCss'], widget.survey.customCss),
       ),
     );
 
@@ -235,32 +261,35 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   ) {
     // Builder so the keyboard inset is read in a context that rebuilds on
     // keyboard show/hide.
-    return Builder(
-      builder: (ctx) {
-        final webView = Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-          child: builder(
-            ctx,
-            html: html,
-            appUrl: appUrl,
-            onEvent: _onEvent,
-            launch: widget.launch,
-            onLoadError: _handleWebViewLoadError,
-          ),
-        );
-        // Backdrop placements fill and block the screen. Non-overlay placements
-        // only accept pointers within the reported card rect; the WebView paints
-        // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
-        // WebView as `child` keeps its controller alive across geometry updates.
-        if (_hasOverlay) return webView;
-        return ValueListenableBuilder<SurveyTouchRegion>(
-          valueListenable: _touchRegion,
-          builder: (_, region, child) =>
-              _PointerMask(region: region, child: child!),
-          child: webView,
-        );
-      },
-    );
+    return AppearanceScope(
+        appearance: _appearance,
+        child: Builder(
+          builder: (ctx) {
+            final webView = Padding(
+              padding:
+                  EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+              child: builder(
+                ctx,
+                html: html,
+                appUrl: appUrl,
+                onEvent: _onEvent,
+                launch: widget.launch,
+                onLoadError: _handleWebViewLoadError,
+              ),
+            );
+            // Backdrop placements fill and block the screen. Non-overlay placements
+            // only accept pointers within the reported card rect; the WebView paints
+            // full-bleed (so shadows show) but rejects hits elsewhere. Passing the
+            // WebView as `child` keeps its controller alive across geometry updates.
+            if (_hasOverlay) return webView;
+            return ValueListenableBuilder<SurveyTouchRegion>(
+              valueListenable: _touchRegion,
+              builder: (_, region, child) =>
+                  _PointerMask(region: region, child: child!),
+              child: webView,
+            );
+          },
+        ),);
   }
 
   void _onEvent(WebViewEvent event) {
@@ -390,6 +419,8 @@ class _SurveyWebViewState extends State<SurveyWebView> {
   @override
   void dispose() {
     _delayTimer?.cancel();
+    AppearanceState.instance.removeListener(_syncAppearance);
+    _appearance.dispose();
     // External store reset can unmount us without a close; tear down the active
     // presentation via captured handles (no live BuildContext required). The
     // guards make removal idempotent if it was already dismissed.

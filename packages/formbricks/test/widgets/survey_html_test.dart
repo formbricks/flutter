@@ -202,4 +202,48 @@ void main() {
       );
     });
   });
+
+  group('appearance and customCss', () {
+    String optionsJson(SurveyHtmlOptions o) => buildSurveyHtml(o);
+
+    test('hands the resolved appearance to renderSurvey', () {
+      final options = SurveyHtmlOptions(
+        survey: _survey(),
+        appUrl: 'https://app.formbricks.com',
+        workspaceId: 'wsp_1',
+        isBrandingEnabled: true,
+        languageCode: 'default',
+        appearance: 'dark',
+      );
+      expect(options.toRenderOptions()['appearance'], 'dark');
+      expect(optionsJson(options), contains('"appearance":"dark"'));
+    });
+
+    test('forwards customCss, and sends no key when there is none', () {
+      final withCss = SurveyHtmlOptions(
+        survey: _survey(),
+        appUrl: 'https://app.formbricks.com',
+        workspaceId: 'wsp_1',
+        isBrandingEnabled: true,
+        languageCode: 'default',
+        customCss: const {
+          'workspace': {'dark': '.a{color:red}'},
+        },
+      );
+      expect(withCss.toRenderOptions()['customCss'], {
+        'workspace': {'dark': '.a{color:red}'},
+      });
+      expect(_opts().toRenderOptions().containsKey('customCss'), isFalse);
+    });
+
+    test('TSurvey exposes its compiled customCss', () {
+      expect(
+        _survey({
+          'customCss': {'light': '.x{}'},
+        }).customCss,
+        {'light': '.x{}'},
+      );
+      expect(_survey().customCss, isNull);
+    });
+  });
 }

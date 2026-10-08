@@ -7,6 +7,10 @@ const String _defaultWorkspaceId = String.fromEnvironment('WORKSPACE_ID');
 const String kWelcomeMessage = 'Welcome to Formbricks';
 const String _statusConnected = 'connected ✓';
 
+/// The app's own theme mode, so the demo can show `FormbricksAppearance.system`
+/// following it rather than the phone.
+final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.light);
+
 void main() {
   runApp(const PlaygroundApp());
 }
@@ -16,13 +20,24 @@ class PlaygroundApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Formbricks Flutter Playground',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'Formbricks Flutter Playground',
+        themeMode: mode,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
+        home: const PlaygroundHome(),
       ),
-      home: const PlaygroundHome(),
     );
   }
 }
@@ -305,6 +320,36 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                     style: textTheme.bodySmall,
                   ),
                 ],
+                const Divider(height: 40),
+
+                Text('Survey appearance', style: textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final appearance in FormbricksAppearance.values)
+                      OutlinedButton(
+                        onPressed: () => Formbricks.setAppearance(appearance),
+                        child: Text(appearance.name),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('App theme', style: textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => appThemeMode.value = ThemeMode.light,
+                      child: const Text('App light'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => appThemeMode.value = ThemeMode.dark,
+                      child: const Text('App dark'),
+                    ),
+                  ],
+                ),
                 const Divider(height: 40),
 
                 Text('Track a code action', style: textTheme.titleSmall),

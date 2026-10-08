@@ -29,6 +29,8 @@ class SurveyHtmlOptions {
     this.clickOutside,
     this.overlay,
     this.hiddenFieldsRecord = const <String, Object>{},
+    this.appearance = 'light',
+    this.customCss,
   });
 
   /// The survey to render.
@@ -68,6 +70,14 @@ class SurveyHtmlOptions {
   /// re-runs all of it on ingest.
   final Map<String, Object> hiddenFieldsRecord;
 
+  /// What the survey opens with: `'light'` or `'dark'`. It is part of the page,
+  /// so a later change goes through `runJavaScript` instead of loading again,
+  /// which would lose the respondent's answers.
+  final String appearance;
+
+  /// The compiled `{workspace?, survey?}` custom CSS, or null to omit the key.
+  final Map<String, Map<String, String>>? customCss;
+
   /// The `renderSurvey` options object.
   Map<String, dynamic> toRenderOptions() => {
         'workspaceId': workspaceId,
@@ -82,6 +92,8 @@ class SurveyHtmlOptions {
         if (overlay != null) 'overlay': overlay,
         'isWebEnvironment': false,
         'hiddenFieldsRecord': hiddenFieldsRecord,
+        'appearance': appearance,
+        if (customCss != null) 'customCss': customCss,
       };
 }
 
