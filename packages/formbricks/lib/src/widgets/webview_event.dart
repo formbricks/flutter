@@ -24,6 +24,12 @@ final class DisplayCreatedEvent extends WebViewEvent {
   const DisplayCreatedEvent();
 }
 
+/// `renderSurvey` returned, so `formbricksSurveys.setAppearance` exists.
+final class SurveyRenderedEvent extends WebViewEvent {
+  /// Creates a survey-rendered event.
+  const SurveyRenderedEvent();
+}
+
 /// The runtime recorded a response.
 final class ResponseCreatedEvent extends WebViewEvent {
   /// Creates a response-created event.
@@ -101,6 +107,7 @@ List<WebViewEvent> parseWebViewEvents(String raw) {
 
   final events = <WebViewEvent>[];
   if (map['onDisplayCreated'] == true) events.add(const DisplayCreatedEvent());
+  if (map['onSurveyRendered'] == true) events.add(const SurveyRenderedEvent());
   if (map['onResponseCreated'] == true) {
     events.add(const ResponseCreatedEvent());
   }
@@ -164,6 +171,7 @@ bool _hasValidShape(Map<String, dynamic> map) {
     'onResponseCreated',
     'onOpenExternalURL',
     'onFinished',
+    'onSurveyRendered',
   ];
   for (final key in boolFlags) {
     final value = map[key];

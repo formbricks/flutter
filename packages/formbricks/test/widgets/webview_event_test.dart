@@ -10,6 +10,17 @@ void main() {
       );
     });
 
+    test('survey-rendered', () {
+      expect(
+        parseWebViewEvents('{"onSurveyRendered":true}').single,
+        isA<SurveyRenderedEvent>(),
+      );
+    });
+
+    test('wrong-typed survey-rendered flag → empty', () {
+      expect(parseWebViewEvents('{"onSurveyRendered":"yes"}'), isEmpty);
+    });
+
     test('response-created', () {
       expect(
         parseWebViewEvents('{"onResponseCreated":true}').single,
