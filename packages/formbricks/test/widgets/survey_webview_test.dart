@@ -23,6 +23,7 @@ class _StubHost {
   VoidCallback? onLoadError;
   String? html;
   ValueNotifier<String>? appearance;
+  String? initialAppearance;
 
   Widget build(
     BuildContext context, {
@@ -33,6 +34,7 @@ class _StubHost {
     VoidCallback? onLoadError,
   }) {
     appearance = AppearanceScope.maybeOf(context);
+    initialAppearance = AppearanceScope.initialOf(context);
     this.onEvent = onEvent;
     this.onLoadError = onLoadError;
     this.html = html;
@@ -201,6 +203,38 @@ void main() {
           '"survey":{"light":".s{margin:0}"}}',
         ),
       );
+    });
+
+    testWidgets('the host can read the value baked into the page',
+        (tester) async {
+      await _seedConfig();
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      expect(host.initialAppearance, 'dark');
+
+      // A change after display moves the notifier, not the baked-in value.
+      AppearanceState.instance.set(FormbricksAppearance.light);
+      await tester.pump();
+      expect(host.appearance?.value, 'light');
+      expect(host.initialAppearance, 'dark');
+    });
+
+    testWidgets('a survey-rendered event is consumed by the host',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      host.onEvent!(const SurveyRenderedEvent());
+      await tester.pump();
+
+      expect(find.byKey(_stub), findsOneWidget); // still showing
     });
 
     testWidgets('a change while open reaches the host without a reload',

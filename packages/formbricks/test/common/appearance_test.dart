@@ -104,6 +104,19 @@ void main() {
       );
     });
 
+    testWidgets(
+        'system falls back to the platform brightness with no app theme',
+        (tester) async {
+      Widget bare(Widget c) => MediaQuery(
+            data: const MediaQueryData(platformBrightness: Brightness.dark),
+            child: c,
+          );
+      expect(
+        await resolveIn(tester, FormbricksAppearance.system, wrap: bare),
+        'dark',
+      );
+    });
+
     testWidgets('system follows a Cupertino app theme', (tester) async {
       Widget cupertino(Widget c) => CupertinoApp(
             theme: const CupertinoThemeData(brightness: Brightness.dark),
