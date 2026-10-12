@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:formbricks/src/common/appearance.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
 import 'package:formbricks/src/common/setup.dart';
@@ -145,5 +146,27 @@ void main() {
     await tester.pump();
 
     expect(envFetches, 1);
+  });
+
+  testWidgets('applies the appearance prop before setup runs', (tester) async {
+    AppearanceState.instance.reset();
+    addTearDown(AppearanceState.instance.reset);
+    final mock = MockClient((req) async => http.Response(_envBody(), 200));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Formbricks(
+          appUrl: 'https://app.formbricks.com',
+          workspaceId: 'wsp_1',
+          appearance: FormbricksAppearance.dark,
+          httpClient: mock,
+          startTicker: false,
+          webViewHostBuilder: _StubHost().build,
+        ),
+      ),
+    );
+
+    expect(AppearanceState.instance.current, FormbricksAppearance.dark);
+    await tester.pumpAndSettle();
   });
 }

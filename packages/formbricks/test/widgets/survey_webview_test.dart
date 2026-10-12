@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:formbricks/src/common/appearance.dart';
 import 'package:formbricks/src/common/config.dart';
 import 'package:formbricks/src/common/logger.dart';
 import 'package:formbricks/src/survey/embedded_data.dart';
@@ -21,6 +22,8 @@ class _StubHost {
   void Function(WebViewEvent)? onEvent;
   VoidCallback? onLoadError;
   String? html;
+  ValueNotifier<String>? appearance;
+  String? initialAppearance;
 
   Widget build(
     BuildContext context, {
@@ -30,6 +33,8 @@ class _StubHost {
     LaunchUrlFn? launch,
     VoidCallback? onLoadError,
   }) {
+    appearance = AppearanceScope.maybeOf(context);
+    initialAppearance = AppearanceScope.initialOf(context);
     this.onEvent = onEvent;
     this.onLoadError = onLoadError;
     this.html = html;
@@ -155,6 +160,123 @@ void main() {
   });
 
   tearDown(EmbeddedDataStore.instance.clear);
+
+  group('appearance and custom CSS', () {
+    setUp(AppearanceState.instance.reset);
+    tearDown(AppearanceState.instance.reset);
+
+    testWidgets('opens light by default and sends no customCss key',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      expect(host.html, contains('"appearance":"light"'));
+      expect(host.html, isNot(contains('customCss')));
+      expect(host.appearance?.value, 'light');
+    });
+
+    testWidgets('opens in the appearance set before display, with the CSS',
+        (tester) async {
+      await _seedConfig(
+        settings: {
+          'customCss': {'dark': '.w{color:red}'},
+        },
+      );
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      final host = await _present(
+        tester,
+        _survey({
+          'id': 's1',
+          'languages': <dynamic>[],
+          'customCss': {'light': '.s{margin:0}'},
+        }),
+      );
+
+      expect(host.html, contains('"appearance":"dark"'));
+      expect(
+        host.html,
+        contains(
+          '"customCss":{"workspace":{"dark":".w{color:red}"},'
+          '"survey":{"light":".s{margin:0}"}}',
+        ),
+      );
+    });
+
+    testWidgets('the host can read the value baked into the page',
+        (tester) async {
+      await _seedConfig();
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      expect(host.initialAppearance, 'dark');
+
+      // A change after display moves the notifier, not the baked-in value.
+      AppearanceState.instance.set(FormbricksAppearance.light);
+      await tester.pump();
+      expect(host.appearance?.value, 'light');
+      expect(host.initialAppearance, 'dark');
+    });
+
+    testWidgets('a survey-rendered event is consumed by the host',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+
+      host.onEvent!(const SurveyRenderedEvent());
+      await tester.pump();
+
+      expect(find.byKey(_stub), findsOneWidget); // still showing
+    });
+
+    testWidgets('a change while open reaches the host without a reload',
+        (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      final openedWith = host.html;
+
+      AppearanceState.instance.set(FormbricksAppearance.dark);
+      await tester.pump();
+
+      expect(host.appearance?.value, 'dark');
+      // The page itself is frozen: reloading it would lose the answers.
+      expect(host.html, openedWith);
+    });
+
+    testWidgets('system follows the app theme live', (tester) async {
+      await _seedConfig();
+      AppearanceState.instance.set(FormbricksAppearance.system);
+      final survey = _survey({'id': 's1', 'languages': <dynamic>[]});
+      final host = _StubHost();
+      SurveyStore.instance.setSurvey(survey);
+      Widget app(ThemeMode mode) => MaterialApp(
+            themeMode: mode,
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+          );
+
+      await tester.pumpWidget(app(ThemeMode.light));
+      await tester.pump();
+      await tester.pump();
+      expect(host.appearance?.value, 'light');
+
+      await tester.pumpWidget(app(ThemeMode.dark));
+      await tester.pumpAndSettle();
+      expect(host.appearance?.value, 'dark');
+    });
+  });
 
   group('the Embedded Data pipe', () {
     // `_present` passing `hiddenFieldsRecord: EmbeddedDataStore.instance
@@ -634,15 +756,44 @@ void main() {
       expect(r.host.taps, 1, reason: 'inside-card tap hits the WebView');
     });
 
-    testWidgets('non-overlay before geometry arrives: every tap passes through',
+    testWidgets('non-overlay before geometry arrives: the survey takes the tap',
         (tester) async {
       await _seedConfig();
       final r = await presentOver(
         tester,
         _survey({'id': 's1', 'languages': <dynamic>[]}),
       );
-      // No GeometryEvent yet → nothing is interactive.
+      // No GeometryEvent yet, which happens for the whole of a survey's life
+      // against a server whose renderer predates `onCardRectChange`. The SDK has
+      // to keep taking every pointer, exactly as it did before the mask existed.
+      //
+      // This used to assert the opposite — that everything fell through — and
+      // that is the bug: a survey rendered by an older server was visible but
+      // completely untappable.
       await tester.tapAt(const Offset(50, 50));
+      await tester.pump();
+
+      expect(r.hostTaps(), 0, reason: 'the host must not get the tap');
+      expect(r.host.taps, 1, reason: 'the survey must stay usable');
+    });
+
+    testWidgets('non-overlay after the card leaves: taps pass through again',
+        (tester) async {
+      await _seedConfig();
+      final r = await presentOver(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
+      r.host.onEvent!(const GeometryEvent(Rect.fromLTWH(0, 0, 100, 100)));
+      await tester.pump();
+
+      // The renderer reports the card's absence while it animates out, a full
+      // second before the close arrives. Without acting on it the SDK leaves a
+      // dead patch over a host app that looks perfectly usable.
+      r.host.onEvent!(const GeometryEvent(null));
+      await tester.pump();
+
+      await tester.tapAt(const Offset(50, 50)); // where the card used to be
       await tester.pump();
 
       expect(r.hostTaps(), 1);
