@@ -82,12 +82,29 @@ Each returns a `Future<Result<void, FormbricksError>>`.
 | `Formbricks.setAttribute(String key, Object value)` | Set one attribute (`String` / `num` / `DateTime`).                       |
 | `Formbricks.setAttributes(Map<String, Object>)`     | Set several attributes at once.                                          |
 | `Formbricks.setLanguage(String language)`           | Set the survey language.                                                 |
+| `Formbricks.setAppearance(FormbricksAppearance)`    | Surveys render `light` (default), `dark`, or `system`. See Dark mode.    |
 | `Formbricks.logout()`                               | Reset to an anonymous session.                                           |
 
 Attribute keys must be lowercase letters, numbers, and underscores, and start
 with a letter. `DateTime` values are sent as UTC ISO-8601 strings; numbers stay
 numbers. Identity/attribute changes are debounced (~500 ms) and coalesced into a
 single backend request.
+
+## Dark mode
+
+Surveys render light by default:
+
+```dart
+Formbricks.setAppearance(FormbricksAppearance.dark); // light, dark or system
+```
+
+- Works before or after `setup`, or pass `appearance:` to the `Formbricks` widget. A string (`'dark'`) is accepted too.
+- An open survey switches in place; the typed answer and current question stay.
+- `system` follows **your app's** theme (its `Theme` / `ThemeMode`, else the Cupertino theme), not the phone's, and updates live.
+- Kept across `logout()`, forgotten on app restart, never sent to the server. An unknown value is logged and falls back to light.
+- Needs a Formbricks server that supports dark mode; an older server keeps surveys light.
+
+Custom CSS configured in Formbricks needs no SDK call; it arrives with the workspace state.
 
 ## Identification & targeting
 
