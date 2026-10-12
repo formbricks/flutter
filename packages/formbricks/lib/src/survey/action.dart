@@ -122,7 +122,7 @@ Future<Result<void, FormbricksError>> track(
       );
     }
 
-    return trackAction(match.name, alias: code, config: fc, store: store);
+    return await trackAction(match.name, alias: code, config: fc, store: store);
   } on FormbricksError catch (e, stackTrace) {
     Logger.error('Error tracking action: $e\n$stackTrace');
     return Result.err(e);
