@@ -47,7 +47,7 @@ fvm install
 make doctor
 ```
 
-`fvm install` downloads the Flutter version from `.fvmrc` (currently `3.44.0`).
+`fvm install` downloads the Flutter version from `.fvmrc` (currently `3.47.7`).
 `make doctor` checks the local iOS/Android tooling with the pinned Flutter SDK.
 Fix the red `✗` items for the platform you want to run, then run the doctor
 command again.
