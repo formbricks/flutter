@@ -20,7 +20,7 @@ endif
 MELOS := $(DART) run melos
 
 .PHONY: help deps deps-lockfile get doctor analyze analyze-ci lint format format-docs format-docs-check format-check check
-.PHONY: test test-sdk-machine test-playground coverage test-coverage test-sdk-coverage
+.PHONY: test test-sdk-machine test-playground test-tools coverage test-coverage test-sdk-coverage
 .PHONY: build build-all build-android build-ios build-ios-no-codesign run run-ios run-android devices emulators
 .PHONY: pana-install pana pub-publish-dry-run pub-publish-force
 .PHONY: ios android
@@ -41,6 +41,7 @@ help:
 	@printf "  test            Run tests in packages that have test/\n"
 	@printf "  test-sdk-machine Run SDK tests and write machine JSON output\n"
 	@printf "  test-playground Run playground tests\n"
+	@printf "  test-tools      Run tests for the tool/ scripts (dependency inventory)\n"
 	@printf "  coverage        Run tests with coverage\n"
 	@printf "  test-sdk-coverage Run SDK tests with coverage\n"
 	@printf "  check           Run format-check, analyze, and test\n\n"
@@ -101,6 +102,9 @@ test-sdk-machine:
 
 test-playground:
 	cd $(PLAYGROUND_DIR) && $(FLUTTER) test
+
+test-tools:
+	$(DART) run tool/dependency_inventory_test.dart
 
 coverage test-coverage:
 	$(MELOS) exec --concurrency 1 --dir-exists=test -- "$(FLUTTER) test --coverage"

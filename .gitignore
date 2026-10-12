@@ -38,6 +38,10 @@ coverage/
 # Test artifacts (machine reports from `make test-sdk-machine`)
 test-results/
 
+# Dependency-assessment output (tool/dependency_inventory.dart, CI evidence)
+dependency-evidence/
+dependency-graph-reports/
+
 # Android
 **/android/.gradle/
 **/android/local.properties

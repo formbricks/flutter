@@ -1,0 +1,43 @@
+name: Dependency Review
+
+# Blocks pull requests that introduce a dependency with a known High or
+# Critical vulnerability, comparing the PR's dependency-graph manifests with the
+# base branch.
+#
+# Coverage: Pub packages (pubspec.lock). Gradle/Maven changes are NOT covered
+# yet — snapshots for pull requests are not generated; see "Follow-ups" in
+# docs/DEPENDENCY_SECURITY.md. Read-only; findings are never auto-dismissed.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          license-check: false

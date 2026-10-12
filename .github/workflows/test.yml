@@ -65,6 +65,9 @@ jobs:
           DEPS_TARGET: ${{ matrix.deps-target }}
         run: make "$DEPS_TARGET"
 
+      - name: Run tooling tests
+        run: make test-tools
+
       - name: Run SDK package tests
         run: make test-sdk-machine
 

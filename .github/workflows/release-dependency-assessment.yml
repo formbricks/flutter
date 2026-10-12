@@ -1,0 +1,54 @@
+name: Release Dependency Assessment
+
+# Assess the exact dependency inventory of a release candidate, independent of
+# the default branch's Dependabot alert counts. Run it from the Actions tab and
+# give the branch, tag or full commit SHA you intend to release.
+#
+# Collects the Android/Gradle inventory for that commit, adds the Pub lockfile,
+# checks every component against OSV, and uploads evidence bound to the SHA
+# (artifact `dependency-evidence-<sha>`). The run FAILS when the inventory is
+# incomplete or when High/Critical (or unrated) advisories have no active human
+# exception. It never submits anything to GitHub and never dismisses or accepts
+# a finding. See docs/DEPENDENCY_SECURITY.md.
+#
+# The candidate must contain this tooling (.github/actions/gradle-dependency-snapshot
+# and tool/dependency_inventory.dart); it is checked out and run as-is.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Release candidate branch, tag or full commit SHA
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  assess:
+    name: Assess release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout release candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Collect, validate and assess
+        uses: ./.github/actions/gradle-dependency-snapshot
+        with:
+          fail-on-findings: "true"

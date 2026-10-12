@@ -1,0 +1,151 @@
+name: Gradle dependency snapshot and assessment
+description: >-
+  Resolves the Android/Gradle dependencies of the playground app for the
+  checked-out commit, validates the resulting dependency-graph snapshot against
+  the repo and Gradle's own resolution, assesses the full inventory (Gradle + Pub)
+  against OSV, and uploads the evidence. Never submits anything: the snapshot is
+  generated with a read-only token and submitted by a separate job.
+
+# Run after actions/checkout and step-security/harden-runner. See
+# docs/DEPENDENCY_SECURITY.md.
+
+inputs:
+  fail-on-findings:
+    description: >-
+      "true" fails the step when the complete inventory contains High/Critical
+      (or unrated) advisories that have no active exception. An incomplete
+      inventory always fails.
+    required: false
+    default: "false"
+
+outputs:
+  sha:
+    description: Commit SHA the inventory describes.
+    value: ${{ steps.rev.outputs.sha }}
+  evidence-artifact:
+    description: Name of the uploaded evidence artifact.
+    value: dependency-evidence-${{ steps.rev.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve commit
+      id: rev
+      shell: bash
+      run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    # AGP 9 / Gradle 9 need JDK 17+; the playground targets Java 17.
+    - name: Set up Java
+      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      with:
+        distribution: temurin
+        java-version: "17"
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      with:
+        channel: stable
+        flutter-version-file: .fvmrc
+        cache: true
+
+    # Writes apps/playground/android/local.properties (flutter.sdk) and
+    # .flutter-plugins-dependencies, which Gradle needs to include the Flutter
+    # plugins' Android projects. --enforce-lockfile: resolve exactly what is
+    # committed.
+    - name: Install dependencies
+      shell: bash
+      run: make deps-lockfile
+
+    - name: Validate Gradle wrapper
+      uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+    # `generate` only runs the dependency-graph init script; nothing is
+    # submitted or uploaded here. Caching is off so no cache entry can carry
+    # state between runs of this security-relevant job.
+    - name: Generate dependency snapshot
+      uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      env:
+        # Bind the snapshot to the checked-out commit, not the workflow's.
+        GITHUB_DEPENDENCY_GRAPH_SHA: ${{ steps.rev.outputs.sha }}
+      with:
+        build-root-directory: apps/playground/android
+        dependency-graph: generate
+        cache-disabled: true
+
+    # Gradle's own view of what the app runtime classpath resolves to. Used to
+    # (a) prove the snapshot is not missing resolved libraries and (b) tell
+    # shipped native libraries apart from build tooling.
+    - name: Resolve app runtime classpaths
+      shell: bash
+      working-directory: apps/playground/android
+      env:
+        # The graph init script must not emit a second snapshot for these runs.
+        GITHUB_DEPENDENCY_GRAPH_ENABLED: "false"
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/dependency-evidence"
+        for variant in release debug; do
+          ./gradlew -q :app:dependencies --configuration "${variant}RuntimeClasspath" \
+            > "$GITHUB_WORKSPACE/dependency-evidence/gradle-${variant}-runtime-classpath.txt"
+        done
+
+    - name: Validate snapshot against Gradle resolution
+      shell: bash
+      env:
+        SHA: ${{ steps.rev.outputs.sha }}
+      run: |
+        dart run tool/dependency_inventory.dart validate-snapshot \
+          --sha "$SHA" \
+          --gradle-snapshot dependency-graph-reports \
+          --runtime-classpath dependency-evidence/gradle-release-runtime-classpath.txt \
+          --runtime-classpath dependency-evidence/gradle-debug-runtime-classpath.txt
+
+    - name: Assess dependency inventory
+      id: assess
+      shell: bash
+      env:
+        SHA: ${{ steps.rev.outputs.sha }}
+        FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+      run: |
+        set +e
+        dart run tool/dependency_inventory.dart assess \
+          --sha "$SHA" \
+          --gradle-snapshot dependency-graph-reports \
+          --runtime-classpath dependency-evidence/gradle-release-runtime-classpath.txt \
+          --runtime-classpath dependency-evidence/gradle-debug-runtime-classpath.txt \
+          --out dependency-evidence
+        code=$?
+        set -e
+        if [ -f dependency-evidence/assessment.md ]; then
+          cat dependency-evidence/assessment.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+        case "$code" in
+          0) ;;
+          1)
+            echo "::warning::High/Critical (or unrated) dependency advisories need human triage - see the job summary and docs/DEPENDENCY_SECURITY.md."
+            if [ "$FAIL_ON_FINDINGS" = "true" ]; then exit 1; fi
+            ;;
+          *)
+            echo "::error::Dependency inventory is INCOMPLETE - this is not a clean result."
+            exit "$code"
+            ;;
+        esac
+
+    # Self-contained evidence tied to the commit: the snapshot, Gradle's
+    # runtime classpaths, the full inventory and the assessment.
+    - name: Collect snapshot into evidence
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p dependency-evidence/gradle-snapshot
+        if [ -d dependency-graph-reports ]; then
+          cp dependency-graph-reports/*.json dependency-evidence/gradle-snapshot/ 2>/dev/null || true
+        fi
+
+    - name: Upload evidence
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: dependency-evidence-${{ steps.rev.outputs.sha }}
+        path: dependency-evidence/
+        retention-days: 90
+        if-no-files-found: warn

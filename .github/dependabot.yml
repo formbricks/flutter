@@ -15,6 +15,15 @@ updates:
     schedule:
       interval: "weekly"
 
+  # Android build: Gradle/Kotlin/Android plugin versions in settings.gradle.kts.
+  # Complements (does not replace) the dependency-graph submission in
+  # .github/workflows/dependency-submission.yml, which is what makes alerts
+  # cover resolved native and transitive Maven dependencies.
+  - package-ecosystem: "gradle"
+    directory: "/apps/playground/android"
+    schedule:
+      interval: "weekly"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
