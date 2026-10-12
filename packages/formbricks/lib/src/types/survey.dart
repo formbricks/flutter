@@ -116,6 +116,9 @@ class TSurvey {
   /// Whether the survey is available in more than one language.
   bool get isMultiLanguage => languages.length > 1;
 
+  /// The survey's compiled custom CSS (`{light?, dark?}`), when it has any.
+  Object? get customCss => _raw['customCss'];
+
   /// The original decoded JSON, returned verbatim for the survey runtime.
   Map<String, dynamic> toJson() => _raw;
 }
