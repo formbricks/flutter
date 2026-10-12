@@ -576,7 +576,9 @@ class HttpOsvClient implements OsvClient {
           req.write(jsonEncode(body));
         }
         final res = await req.close().timeout(const Duration(seconds: 60));
-        final text = await utf8.decodeStream(res);
+        final text = await utf8
+            .decodeStream(res)
+            .timeout(const Duration(seconds: 60));
         if (res.statusCode == 200) {
           return jsonDecode(text) as Map<String, Object?>;
         }
