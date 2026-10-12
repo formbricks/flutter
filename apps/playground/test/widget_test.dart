@@ -73,6 +73,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const PlaygroundApp());
 
+    // The appearance buttons push the trigger below the test viewport.
+    await tester.ensureVisible(find.text('Trigger Code Action'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Trigger Code Action'));
     await tester.pumpAndSettle();
 

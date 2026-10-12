@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../common/appearance.dart';
 import '../common/command_queue.dart';
 import '../common/config.dart';
 import '../common/logger.dart';
@@ -53,6 +54,7 @@ class Formbricks extends StatefulWidget {
     required this.appUrl,
     required this.workspaceId,
     this.logLevel,
+    this.appearance,
     @visibleForTesting this.webViewHostBuilder,
     @visibleForTesting this.launch,
     @visibleForTesting this.httpClient,
@@ -67,6 +69,10 @@ class Formbricks extends StatefulWidget {
 
   /// Optional log level (defaults from build mode in `setup`).
   final LogLevel? logLevel;
+
+  /// How surveys render, applied before anything else. Null leaves whatever
+  /// [Formbricks.setAppearance] already set.
+  final FormbricksAppearance? appearance;
 
   /// WebView host builder override.
   final WebViewHostBuilder? webViewHostBuilder;
@@ -107,6 +113,23 @@ class Formbricks extends StatefulWidget {
       ),
       checkSetup: false,
     );
+  }
+
+  /// Sets how surveys render: [FormbricksAppearance.light] (default),
+  /// [FormbricksAppearance.dark], or [FormbricksAppearance.system] to follow the
+  /// app's own theme (its `Theme` / `ThemeMode`), not the phone's.
+  ///
+  /// Synchronous and not routed through the command queue, so it works before
+  /// `setup` completes. An open survey switches in place and keeps its answers.
+  /// Kept across [logout], forgotten when the app restarts, and never sent to the
+  /// server. A string (`'dark'`) is accepted too; an unknown value is logged and
+  /// falls back to light.
+  ///
+  /// ```dart
+  /// Formbricks.setAppearance(FormbricksAppearance.dark);
+  /// ```
+  static void setAppearance(Object appearance) {
+    AppearanceState.instance.set(appearance);
   }
 
   /// Tracks a code action through the command queue (`checkSetup: true`).
@@ -261,6 +284,9 @@ class _FormbricksState extends State<Formbricks> {
   @override
   void initState() {
     super.initState();
+    // Local state, not part of setup, and in place before the first survey renders.
+    final appearance = widget.appearance;
+    if (appearance != null) AppearanceState.instance.set(appearance);
     unawaited(_setup());
   }
 
