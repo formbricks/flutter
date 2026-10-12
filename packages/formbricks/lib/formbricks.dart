@@ -6,6 +6,7 @@
 /// queue, config, API client and expiry ticker live behind the facade.
 library;
 
+export 'src/common/appearance.dart' show FormbricksAppearance;
 export 'src/common/logger.dart' show LogLevel;
 export 'src/common/result.dart';
 export 'src/types/errors.dart';
