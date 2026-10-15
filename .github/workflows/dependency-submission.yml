@@ -1,0 +1,124 @@
+name: Dependency Submission
+
+# Gives GitHub's dependency graph (and so Dependabot alerts) the native Android
+# libraries that apps built with the SDK pull in.
+#
+# GitHub detects Pub packages from pubspec.lock automatically, but the Maven
+# artifacts behind the Flutter plugins' Android code are only known after Gradle
+# resolves the playground build. This workflow resolves the release runtime
+# classpath of the playground app, sanity-checks the snapshot, keeps it as an
+# artifact, and submits it. Build tooling (Android Gradle Plugin internals,
+# plugin classpaths) is deliberately left out. See docs/DEPENDENCY_SECURITY.md.
+#
+# push to main + weekly: submit. workflow_dispatch from another branch: dry run.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 5 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  submit:
+    name: Submit Gradle dependency snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The playground build targets Java 17.
+      - name: Set up Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version-file: .fvmrc
+          cache: true
+
+      # Writes apps/playground/android/local.properties (flutter.sdk) and
+      # .flutter-plugins-dependencies, which Gradle needs to include the Flutter
+      # plugins' Android projects.
+      - name: Install dependencies
+        run: make deps-lockfile
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # `generate` only records the resolved dependencies; submission is done
+      # below, after the snapshot is checked.
+      - name: Generate dependency snapshot
+        uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          build-root-directory: apps/playground/android
+          dependency-graph: generate
+          dependency-graph-include-projects: ":app"
+          dependency-graph-include-configurations: "^releaseRuntimeClasspath$"
+          cache-disabled: true
+
+      # Fail instead of submitting an empty, partial or mis-attributed snapshot.
+      - name: Validate snapshot
+        id: validate
+        run: |
+          shopt -s nullglob
+          files=(dependency-graph-reports/*.json)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one dependency snapshot, found ${#files[@]}."
+            exit 1
+          fi
+          f="${files[0]}"
+          snap_sha=$(jq -r '.sha' "$f")
+          snap_ref=$(jq -r '.ref' "$f")
+          count=$(jq '[.manifests[].resolved | length] | add // 0' "$f")
+          webkit=$(jq '[.manifests[].resolved[] | select(.package_url | startswith("pkg:maven/androidx.webkit/webkit@"))] | length' "$f")
+          echo "snapshot=$f" >> "$GITHUB_OUTPUT"
+          echo "Snapshot $f: sha=$snap_sha ref=$snap_ref components=$count"
+          if [ "$snap_sha" != "$GITHUB_SHA" ] || [ "$snap_ref" != "$GITHUB_REF" ]; then
+            echo "::error::Snapshot is for $snap_ref@$snap_sha, expected $GITHUB_REF@$GITHUB_SHA."
+            exit 1
+          fi
+          # A real build resolves ~90 components; androidx.webkit comes from
+          # webview_flutter_android, the SDK's WebView dependency.
+          if [ "$count" -lt 50 ] || [ "$webkit" -lt 1 ]; then
+            echo "::error::Snapshot looks empty or partial (components=$count, androidx.webkit=$webkit)."
+            exit 1
+          fi
+
+      - name: Upload snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-snapshot-${{ github.sha }}
+          path: ${{ steps.validate.outputs.snapshot }}
+          retention-days: 90
+
+      - name: Submit snapshot
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT: ${{ steps.validate.outputs.snapshot }}
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" --input "$SNAPSHOT"
+          echo "Submitted $SNAPSHOT for $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
