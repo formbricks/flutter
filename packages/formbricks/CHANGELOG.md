@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0
+
+- Add `Formbricks.setAppearance()`: surveys render `light` (the default), `dark`
+  or `system`, which follows your app's own theme, not the phone's. It works
+  before or after `setup`, an open survey switches in place, and the choice is
+  not persisted or sent to the server. You can also pass `appearance:` to the
+  `Formbricks` widget. Custom CSS configured in Formbricks is now forwarded to
+  the survey renderer. Dark mode needs a Formbricks server that supports it; an
+  older server keeps surveys light.
+- Take the survey card position from the renderer (`onCardRectChange`) instead
+  of scraping its DOM. This keeps touches outside the card reaching your app
+  when a survey has no backdrop, and stops depending on markup that has broken
+  before. It needs a current Formbricks server: on an older one, a survey with
+  no backdrop blocks touches to the app behind it.
+- Raise dependency floors: `clock` ^1.1.3, `url_launcher` ^6.3.3 and
+  `connectivity_plus` ^7.3.2.
+
 ## 1.2.0
 
 - Add `Formbricks.setEmbeddedData()` and `Formbricks.clearEmbeddedData()`: attach
