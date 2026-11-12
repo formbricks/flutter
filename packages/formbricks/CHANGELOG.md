@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- Raise the `shared_preferences` floor to ^2.5.6.
+
 ## 1.3.0
 
 - Add `Formbricks.setAppearance()`: surveys render `light` (the default), `dark`
