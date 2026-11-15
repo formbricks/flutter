@@ -1,5 +1,11 @@
 # Changelog
 
+Release notes for every version after 1.3.1 live on
+[GitHub Releases](https://github.com/formbricks/flutter/releases). The release
+workflow adds a version's notes to the copy of this file it publishes, so the
+[pub.dev changelog](https://pub.dev/packages/formbricks/changelog) lists them.
+In the repository, the package version stays at the `0.0.0-dev` placeholder.
+
 ## 1.3.1
 
 - Raise the `shared_preferences` floor to ^2.5.6.
