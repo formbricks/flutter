@@ -18,11 +18,11 @@ class TActionClass {
 
   /// Builds a [TActionClass] from decoded JSON.
   factory TActionClass.fromJson(Map<String, dynamic> json) => TActionClass(
-        id: json['id'] as String? ?? '',
-        name: json['name'] as String,
-        type: json['type'] as String? ?? '',
-        key: json['key'] as String?,
-      );
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String,
+    type: json['type'] as String? ?? '',
+    key: json['key'] as String?,
+  );
 
   /// The action-class id.
   final String id;

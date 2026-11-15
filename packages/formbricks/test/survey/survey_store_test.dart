@@ -2,10 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/src/survey/survey_store.dart';
 import 'package:formbricks/src/types/survey.dart';
 
-TSurvey _s(String id, {String? headline}) => TSurvey.fromJson({
-      'id': id,
-      if (headline != null) 'headline': headline,
-    });
+TSurvey _s(String id, {String? headline}) =>
+    TSurvey.fromJson({'id': id, 'headline': ?headline});
 
 void main() {
   setUp(SurveyStore.resetInstance);

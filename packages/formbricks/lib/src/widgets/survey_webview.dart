@@ -118,8 +118,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
 
   void _syncAppearance() {
     if (!mounted || _phase != _SurveyPhase.presenting) return;
-    _appearance.value =
-        resolveAppearance(context, AppearanceState.instance.current);
+    _appearance.value = resolveAppearance(
+      context,
+      AppearanceState.instance.current,
+    );
   }
 
   void _start() {
@@ -132,8 +134,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _phase = _SurveyPhase.loading;
 
     if (widget.survey.isMultiLanguage) {
-      final displayLanguage =
-          getLanguageCode(widget.survey, current.user.data.language);
+      final displayLanguage = getLanguageCode(
+        widget.survey,
+        current.user.data.language,
+      );
       if (displayLanguage == null) {
         Logger.debug(
           'Survey "${widget.survey.id}" is not available in specified language.',
@@ -182,8 +186,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
     _hasOverlay = overlay != null && overlay != 'none';
     // Frozen into the page here; later changes reach the open survey through
     // [_appearance] and the host's `runJavaScript`.
-    _appearance.value =
-        resolveAppearance(context, AppearanceState.instance.current);
+    _appearance.value = resolveAppearance(
+      context,
+      AppearanceState.instance.current,
+    );
     _frozenAppearance = _appearance.value;
     final html = buildSurveyHtml(
       SurveyHtmlOptions(
@@ -195,7 +201,8 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         styling: getStyling(settings, widget.survey),
         contactId: current.user.data.contactId,
         placement: overwrites?.placement ?? _asString(settings['placement']),
-        clickOutside: overwrites?.clickOutsideClose ??
+        clickOutside:
+            overwrites?.clickOutsideClose ??
             _asBool(settings['clickOutsideClose']),
         overlay: overlay,
         // Read here and nowhere else: `_present` runs when the survey is
@@ -204,8 +211,10 @@ class _SurveyWebViewState extends State<SurveyWebView> {
         // next response, never the one on screen.
         hiddenFieldsRecord: EmbeddedDataStore.instance.snapshot(),
         appearance: _appearance.value,
-        customCss:
-            buildCustomCss(settings['customCss'], widget.survey.customCss),
+        customCss: buildCustomCss(
+          settings['customCss'],
+          widget.survey.customCss,
+        ),
       ),
     );
 
@@ -232,7 +241,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       barrierDismissible: false,
       barrierLabel: '',
       transitionDuration: Duration.zero,
-      pageBuilder: (ctx, _, __) => _surveyContent(builder, html, appUrl),
+      pageBuilder: (ctx, _, _) => _surveyContent(builder, html, appUrl),
     );
     _route = route;
     _routeOpen = true;
@@ -273,8 +282,9 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       child: Builder(
         builder: (ctx) {
           final webView = Padding(
-            padding:
-                EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+            ),
             child: builder(
               ctx,
               html: html,
@@ -356,10 +366,7 @@ class _SurveyWebViewState extends State<SurveyWebView> {
       TDisplay(surveyId: widget.survey.id, createdAt: now),
     ];
     final user = current.user.copyWith(
-      data: current.user.data.copyWith(
-        displays: displays,
-        lastDisplayAt: now,
-      ),
+      data: current.user.data.copyWith(displays: displays, lastDisplayAt: now),
     );
     await _config.update(
       current.copyWith(user: user, filteredSurveys: _refilter(current, user)),

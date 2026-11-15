@@ -156,8 +156,9 @@ class UpdateQueue {
 
     // Resolve the effective userId: pending (non-empty) first, then config.
     final pendingUserId = pending.userId;
-    final effectiveUserId =
-        (pendingUserId.isNotEmpty) ? pendingUserId : cfg.user.data.userId;
+    final effectiveUserId = (pendingUserId.isNotEmpty)
+        ? pendingUserId
+        : cfg.user.data.userId;
 
     var attributes = <String, Object?>{...?pending.attributes};
 
@@ -211,7 +212,8 @@ class UpdateQueue {
 
     final cfg = _config.get();
     final injected = apiClientOverride;
-    final api = injected ??
+    final api =
+        injected ??
         ApiClient(appUrl: cfg.appUrl!, workspaceId: cfg.workspaceId!);
 
     Result<CreateOrUpdateUserResponse, ApiErrorResponse> result;
@@ -243,9 +245,10 @@ class UpdateQueue {
             user: value.state,
             filteredSurveys: workspace == null
                 ? const []
-                : filterSurveys(workspace, value.state)
-                    .map((s) => s.toJson())
-                    .toList(),
+                : filterSurveys(
+                    workspace,
+                    value.state,
+                  ).map((s) => s.toJson()).toList(),
           ),
         );
 

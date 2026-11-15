@@ -15,28 +15,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 String _envBody(
   String expiresAt, {
   List<Map<String, dynamic>> surveys = const [],
-}) =>
-    jsonEncode({
-      'data': {
-        'expiresAt': expiresAt,
-        'data': {
-          'surveys': surveys,
-          'actionClasses': <dynamic>[],
-          'settings': <String, dynamic>{},
-        },
-      },
-    });
+}) => jsonEncode({
+  'data': {
+    'expiresAt': expiresAt,
+    'data': {
+      'surveys': surveys,
+      'actionClasses': <dynamic>[],
+      'settings': <String, dynamic>{},
+    },
+  },
+});
 
-Map<String, dynamic> _surveyJson(
-  String id, {
-  Map<String, dynamic>? segment,
-}) =>
+Map<String, dynamic> _surveyJson(String id, {Map<String, dynamic>? segment}) =>
     {
       'id': id,
       'displayOption': 'respondMultiple',
       'triggers': <dynamic>[],
       'languages': <dynamic>[],
-      if (segment != null) 'segment': segment,
+      'segment': ?segment,
     };
 
 void main() {
@@ -55,11 +51,11 @@ void main() {
   });
 
   ExpiryTicker makeTicker(void Function() onEachTick) => ExpiryTicker(
-        config: FormbricksConfig.instance,
-        apiClient: api,
-        interval: const Duration(seconds: 60),
-        onTick: () async => onEachTick(),
-      );
+    config: FormbricksConfig.instance,
+    apiClient: api,
+    interval: const Duration(seconds: 60),
+    onTick: () async => onEachTick(),
+  );
 
   test('does not tick while paused', () {
     fakeAsync((async) {
@@ -123,20 +119,19 @@ void main() {
       DateTime? userExpiry,
       String? userId,
       List<String> segments = const [],
-    }) =>
-        TConfig(
-          workspaceId: 'w',
-          appUrl: 'https://app.x',
-          workspace: TWorkspaceState(
-            expiresAt: workspaceExpiry,
-            data: const TWorkspaceData(),
-          ),
-          user: TUserState(
-            expiresAt: userExpiry,
-            data: TUserData(userId: userId, segments: segments),
-          ),
-          status: TStatus.success,
-        );
+    }) => TConfig(
+      workspaceId: 'w',
+      appUrl: 'https://app.x',
+      workspace: TWorkspaceState(
+        expiresAt: workspaceExpiry,
+        data: const TWorkspaceData(),
+      ),
+      user: TUserState(
+        expiresAt: userExpiry,
+        data: TUserData(userId: userId, segments: segments),
+      ),
+      status: TStatus.success,
+    );
 
     test('refetches the workspace when it has expired', () async {
       await seed(
@@ -203,142 +198,147 @@ void main() {
       );
     });
 
-    test('refetch recomputes filteredSurveys against the identified user',
-        () async {
-      await seed(
-        configWith(
-          workspaceExpiry: now.subtract(const Duration(minutes: 1)),
-          userId: 'u1',
-          segments: ['seg_a'],
-        ),
-      );
-      final api = ApiClient(
-        appUrl: 'https://app.x',
-        workspaceId: 'w',
-        client: MockClient(
-          (_) async => http.Response(
-            _envBody(
-              '2100-01-01T00:00:00.000',
-              surveys: [
-                _surveyJson('plain'),
-                _surveyJson(
-                  'gated',
-                  segment: {'id': 'seg_a', 'hasFilters': true},
-                ),
-              ],
-            ),
-            200,
+    test(
+      'refetch recomputes filteredSurveys against the identified user',
+      () async {
+        await seed(
+          configWith(
+            workspaceExpiry: now.subtract(const Duration(minutes: 1)),
+            userId: 'u1',
+            segments: ['seg_a'],
           ),
-        ),
-      );
-      final ticker = ExpiryTicker(
-        config: FormbricksConfig.instance,
-        apiClient: api,
-      );
-
-      await withClock(Clock.fixed(now), ticker.debugCheck);
-
-      expect(
-        FormbricksConfig.instance
-            .get()
-            .filteredSurveys
-            .map((e) => (e as Map)['id'])
-            .toList(),
-        ['gated'],
-        reason: 'identified users only see segment-matched surveys',
-      );
-    });
-
-    test('a config write landing during the refetch is not clobbered (Ok)',
-        () async {
-      await seed(
-        configWith(workspaceExpiry: now.subtract(const Duration(minutes: 1))),
-      );
-      final api = ApiClient(
-        appUrl: 'https://app.x',
-        workspaceId: 'w',
-        client: MockClient((_) async {
-          // Concurrent writer while the request is on the wire.
-          final mid = FormbricksConfig.instance.get();
-          await FormbricksConfig.instance.update(
-            mid.copyWith(
-              user: const TUserState(
-                expiresAt: null,
-                data: TUserData(userId: 'u1', segments: ['seg_a']),
+        );
+        final api = ApiClient(
+          appUrl: 'https://app.x',
+          workspaceId: 'w',
+          client: MockClient(
+            (_) async => http.Response(
+              _envBody(
+                '2100-01-01T00:00:00.000',
+                surveys: [
+                  _surveyJson('plain'),
+                  _surveyJson(
+                    'gated',
+                    segment: {'id': 'seg_a', 'hasFilters': true},
+                  ),
+                ],
               ),
+              200,
             ),
-          );
-          return http.Response(
-            _envBody(
-              '2100-01-01T00:00:00.000',
-              surveys: [
-                _surveyJson('plain'),
-                _surveyJson(
-                  'gated',
-                  segment: {'id': 'seg_a', 'hasFilters': true},
+          ),
+        );
+        final ticker = ExpiryTicker(
+          config: FormbricksConfig.instance,
+          apiClient: api,
+        );
+
+        await withClock(Clock.fixed(now), ticker.debugCheck);
+
+        expect(
+          FormbricksConfig.instance
+              .get()
+              .filteredSurveys
+              .map((e) => (e as Map)['id'])
+              .toList(),
+          ['gated'],
+          reason: 'identified users only see segment-matched surveys',
+        );
+      },
+    );
+
+    test(
+      'a config write landing during the refetch is not clobbered (Ok)',
+      () async {
+        await seed(
+          configWith(workspaceExpiry: now.subtract(const Duration(minutes: 1))),
+        );
+        final api = ApiClient(
+          appUrl: 'https://app.x',
+          workspaceId: 'w',
+          client: MockClient((_) async {
+            // Concurrent writer while the request is on the wire.
+            final mid = FormbricksConfig.instance.get();
+            await FormbricksConfig.instance.update(
+              mid.copyWith(
+                user: const TUserState(
+                  expiresAt: null,
+                  data: TUserData(userId: 'u1', segments: ['seg_a']),
                 ),
-              ],
-            ),
-            200,
-          );
-        }),
-      );
-      final ticker = ExpiryTicker(
-        config: FormbricksConfig.instance,
-        apiClient: api,
-      );
-
-      await withClock(Clock.fixed(now), ticker.debugCheck);
-
-      final config = FormbricksConfig.instance.get();
-      expect(
-        config.user.data.userId,
-        'u1',
-        reason: 'the concurrent user write must survive the workspace persist',
-      );
-      expect(
-        config.filteredSurveys.map((e) => (e as Map)['id']).toList(),
-        ['gated'],
-        reason: 'the refilter must see the concurrently-written user',
-      );
-    });
-
-    test('a config write landing during a failed refetch is kept (Err)',
-        () async {
-      await seed(
-        configWith(workspaceExpiry: now.subtract(const Duration(minutes: 1))),
-      );
-      final api = ApiClient(
-        appUrl: 'https://app.x',
-        workspaceId: 'w',
-        client: MockClient((_) async {
-          final mid = FormbricksConfig.instance.get();
-          await FormbricksConfig.instance.update(
-            mid.copyWith(
-              user: const TUserState(
-                expiresAt: null,
-                data: TUserData(userId: 'u1'),
               ),
-            ),
-          );
-          return http.Response('{}', 500);
-        }),
-      );
-      final ticker = ExpiryTicker(
-        config: FormbricksConfig.instance,
-        apiClient: api,
-      );
+            );
+            return http.Response(
+              _envBody(
+                '2100-01-01T00:00:00.000',
+                surveys: [
+                  _surveyJson('plain'),
+                  _surveyJson(
+                    'gated',
+                    segment: {'id': 'seg_a', 'hasFilters': true},
+                  ),
+                ],
+              ),
+              200,
+            );
+          }),
+        );
+        final ticker = ExpiryTicker(
+          config: FormbricksConfig.instance,
+          apiClient: api,
+        );
 
-      await withClock(Clock.fixed(now), ticker.debugCheck);
+        await withClock(Clock.fixed(now), ticker.debugCheck);
 
-      final config = FormbricksConfig.instance.get();
-      expect(config.user.data.userId, 'u1', reason: 'concurrent write kept');
-      expect(
-        config.workspace!.expiresAt,
-        now.add(const Duration(minutes: 30)),
-        reason: 'validity still extended for the retry',
-      );
-    });
+        final config = FormbricksConfig.instance.get();
+        expect(
+          config.user.data.userId,
+          'u1',
+          reason:
+              'the concurrent user write must survive the workspace persist',
+        );
+        expect(config.filteredSurveys.map((e) => (e as Map)['id']).toList(), [
+          'gated',
+        ], reason: 'the refilter must see the concurrently-written user');
+      },
+    );
+
+    test(
+      'a config write landing during a failed refetch is kept (Err)',
+      () async {
+        await seed(
+          configWith(workspaceExpiry: now.subtract(const Duration(minutes: 1))),
+        );
+        final api = ApiClient(
+          appUrl: 'https://app.x',
+          workspaceId: 'w',
+          client: MockClient((_) async {
+            final mid = FormbricksConfig.instance.get();
+            await FormbricksConfig.instance.update(
+              mid.copyWith(
+                user: const TUserState(
+                  expiresAt: null,
+                  data: TUserData(userId: 'u1'),
+                ),
+              ),
+            );
+            return http.Response('{}', 500);
+          }),
+        );
+        final ticker = ExpiryTicker(
+          config: FormbricksConfig.instance,
+          apiClient: api,
+        );
+
+        await withClock(Clock.fixed(now), ticker.debugCheck);
+
+        final config = FormbricksConfig.instance.get();
+        expect(config.user.data.userId, 'u1', reason: 'concurrent write kept');
+        expect(
+          config.workspace!.expiresAt,
+          now.add(const Duration(minutes: 30)),
+          reason: 'validity still extended for the retry',
+        );
+      },
+    );
 
     test('extends workspace validity when the refetch fails', () async {
       await seed(

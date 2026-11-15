@@ -33,15 +33,15 @@ class _StubHost {
 }
 
 String _envBody() => jsonEncode({
-      'data': {
-        'expiresAt': '2100-01-01T00:00:00.000',
-        'data': {
-          'surveys': <dynamic>[],
-          'actionClasses': <dynamic>[],
-          'settings': <String, dynamic>{},
-        },
-      },
-    });
+  'data': {
+    'expiresAt': '2100-01-01T00:00:00.000',
+    'data': {
+      'surveys': <dynamic>[],
+      'actionClasses': <dynamic>[],
+      'settings': <String, dynamic>{},
+    },
+  },
+});
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -54,8 +54,9 @@ void main() {
     resetSetupForTest();
   });
 
-  testWidgets('renders nothing and does not swallow touches when idle',
-      (tester) async {
+  testWidgets('renders nothing and does not swallow touches when idle', (
+    tester,
+  ) async {
     final mock = MockClient((_) async => http.Response(_envBody(), 200));
     var tapped = false;
 
@@ -114,8 +115,9 @@ void main() {
     expect(find.byKey(const Key('stub-webview')), findsOneWidget);
   });
 
-  testWidgets('calls setup exactly once on mount (rebuilds do not re-run it)',
-      (tester) async {
+  testWidgets('calls setup exactly once on mount (rebuilds do not re-run it)', (
+    tester,
+  ) async {
     var envFetches = 0;
     final mock = MockClient((req) async {
       if (req.url.path.endsWith('/environment')) envFetches++;

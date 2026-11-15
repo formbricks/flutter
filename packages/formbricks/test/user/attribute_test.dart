@@ -14,37 +14,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A stub API client so a debounced flush never performs real network I/O.
 ApiClient _noopApi() => ApiClient(
-      appUrl: 'https://app.formbricks.com',
-      workspaceId: 'wsp_1',
-      client: MockClient(
-        (_) async => http.Response(
-          jsonEncode({
-            'data': {
-              'state': {'expiresAt': null, 'data': <String, dynamic>{}},
-            },
-          }),
-          200,
-        ),
-      ),
-    );
+  appUrl: 'https://app.formbricks.com',
+  workspaceId: 'wsp_1',
+  client: MockClient(
+    (_) async => http.Response(
+      jsonEncode({
+        'data': {
+          'state': {'expiresAt': null, 'data': <String, dynamic>{}},
+        },
+      }),
+      200,
+    ),
+  ),
+);
 
 String _configJson() => jsonEncode({
-      'workspaceId': 'wsp_1',
-      'appUrl': 'https://app.formbricks.com',
-      'workspace': {
-        'expiresAt': '2100-01-01T00:00:00.000',
-        'data': {
-          'surveys': <dynamic>[],
-          'actionClasses': <dynamic>[],
-          'settings': <String, dynamic>{},
-        },
-      },
-      'user': {
-        'expiresAt': null,
-        'data': {'userId': 'u1'},
-      },
-      'status': {'value': 'success', 'expiresAt': null},
-    });
+  'workspaceId': 'wsp_1',
+  'appUrl': 'https://app.formbricks.com',
+  'workspace': {
+    'expiresAt': '2100-01-01T00:00:00.000',
+    'data': {
+      'surveys': <dynamic>[],
+      'actionClasses': <dynamic>[],
+      'settings': <String, dynamic>{},
+    },
+  },
+  'user': {
+    'expiresAt': null,
+    'data': {'userId': 'u1'},
+  },
+  'status': {'value': 'success', 'expiresAt': null},
+});
 
 Future<FormbricksConfig> _seed() async {
   SharedPreferences.setMockInitialValues({
@@ -115,8 +115,10 @@ void main() {
     });
 
     test('nothing is queued when a value is unsupported', () async {
-      final result =
-          await setAttributes({'plan': 'pro', 'flag': true}, queue: queue);
+      final result = await setAttributes({
+        'plan': 'pro',
+        'flag': true,
+      }, queue: queue);
 
       expect(result, isA<Err<void, FormbricksError>>());
       expect(queue.pendingAttributes, isNull);

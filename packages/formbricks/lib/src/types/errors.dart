@@ -7,7 +7,7 @@ enum FormbricksErrorCode {
   /// A network/transport failure or non-2xx server response.
   networkError('network_error'),
 
-  /// The SDK was used before [setup] completed.
+  /// The SDK was used before `Formbricks.setup()` completed.
   notSetup('not_setup'),
 
   /// The backend rejected the request (auth / 404 environment).
@@ -49,16 +49,13 @@ sealed class FormbricksError implements Exception {
 final class MissingFieldError extends FormbricksError {
   /// Creates a missing-field error for [field].
   MissingFieldError(this.field, {String? message})
-      : super(
-          FormbricksErrorCode.missingField,
-          message ?? 'No $field provided',
-        );
+    : super(FormbricksErrorCode.missingField, message ?? 'No $field provided');
 
   /// The name of the offending field.
   final String field;
 }
 
-/// The SDK was used before [setup] completed.
+/// The SDK was used before `Formbricks.setup()` completed.
 final class NotSetupError extends FormbricksError {
   /// Creates a not-setup error.
   NotSetupError([
@@ -96,12 +93,12 @@ final class NetworkError extends FormbricksError {
 final class UnsupportedAttributeValueError extends FormbricksError {
   /// Creates an unsupported-value error for [key], whose value had [valueType].
   UnsupportedAttributeValueError(this.key, this.valueType, {String? message})
-      : super(
-          FormbricksErrorCode.unsupportedAttributeValue,
-          message ??
-              'Unsupported attribute value type `$valueType` for key `$key`. '
-                  'Attribute values must be a String, num, or DateTime.',
-        );
+    : super(
+        FormbricksErrorCode.unsupportedAttributeValue,
+        message ??
+            'Unsupported attribute value type `$valueType` for key `$key`. '
+                'Attribute values must be a String, num, or DateTime.',
+      );
 
   /// The attribute key whose value was rejected.
   final String key;
@@ -114,7 +111,7 @@ final class UnsupportedAttributeValueError extends FormbricksError {
 final class InvalidCodeError extends FormbricksError {
   /// Creates an invalid-code error.
   InvalidCodeError([String message = 'Invalid code'])
-      : super(FormbricksErrorCode.invalidCode, message);
+    : super(FormbricksErrorCode.invalidCode, message);
 }
 
 /// An internal SDK failure that is not a network/backend error.
@@ -126,9 +123,9 @@ final class InternalError extends FormbricksError {
     this.stackTrace,
     String? message,
   }) : super(
-          FormbricksErrorCode.internalError,
-          message ?? 'Internal error while running $operation.',
-        );
+         FormbricksErrorCode.internalError,
+         message ?? 'Internal error while running $operation.',
+       );
 
   /// The SDK operation that failed.
   final String operation;
@@ -140,8 +137,8 @@ final class InternalError extends FormbricksError {
   final StackTrace? stackTrace;
 }
 
-/// Thrown when the very first [setup] attempt fails and the SDK is placed into
-/// the error-cooldown state.
+/// Thrown when the very first `Formbricks.setup()` attempt fails and the SDK is
+/// placed into the error-cooldown state.
 final class FormbricksSetupError extends FormbricksError {
   /// Creates a setup error. Carries the underlying [code] (network/forbidden).
   FormbricksSetupError({
@@ -156,17 +153,17 @@ final class FormbricksSetupError extends FormbricksError {
 final class SetupCooldownError extends FormbricksError {
   /// Creates a cooldown error, optionally carrying the cooldown expiry.
   SetupCooldownError({this.retryAt})
-      : super(
-          FormbricksErrorCode.setupCooldown,
-          'Formbricks is in an error cooldown after a failed setup. '
-          'Retry later.',
-        );
+    : super(
+        FormbricksErrorCode.setupCooldown,
+        'Formbricks is in an error cooldown after a failed setup. '
+        'Retry later.',
+      );
 
   /// When the cooldown expires and `setup()` will attempt again, if known.
   final DateTime? retryAt;
 }
 
-/// A normalized API error returned by [ApiClient]. Distinct from
+/// A normalized API error returned by the internal API client. Distinct from
 /// [FormbricksError] because the API layer preserves the raw server `code`
 /// string (which may be wider than [FormbricksErrorCode]).
 class ApiErrorResponse {

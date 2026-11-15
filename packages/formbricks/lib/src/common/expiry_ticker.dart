@@ -118,9 +118,10 @@ class ExpiryTicker with WidgetsBindingObserver {
           await config.update(
             synced.copyWith(
               workspace: value,
-              filteredSurveys: filterSurveys(value, synced.user)
-                  .map((s) => s.toJson())
-                  .toList(),
+              filteredSurveys: filterSurveys(
+                value,
+                synced.user,
+              ).map((s) => s.toJson()).toList(),
             ),
           );
         case Err(:final error):

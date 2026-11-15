@@ -20,14 +20,15 @@ import 'webview_navigation.dart';
 
 /// Builds the widget that hosts the survey WebView. Injectable so widget tests
 /// can substitute a stub that never touches a platform channel.
-typedef WebViewHostBuilder = Widget Function(
-  BuildContext context, {
-  required String html,
-  required String appUrl,
-  required void Function(WebViewEvent event) onEvent,
-  LaunchUrlFn? launch,
-  VoidCallback? onLoadError,
-});
+typedef WebViewHostBuilder =
+    Widget Function(
+      BuildContext context, {
+      required String html,
+      required String appUrl,
+      required void Function(WebViewEvent event) onEvent,
+      LaunchUrlFn? launch,
+      VoidCallback? onLoadError,
+    });
 
 /// The production [WebViewHostBuilder] backed by `webview_flutter`.
 ///
@@ -150,9 +151,7 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
               case NavAction.allow:
                 return NavigationDecision.navigate;
               case NavAction.openExternally:
-                unawaited(
-                  openExternalUrl(request.url, launch: widget.launch),
-                );
+                unawaited(openExternalUrl(request.url, launch: widget.launch));
                 return NavigationDecision.prevent;
               case NavAction.block:
                 return NavigationDecision.prevent;
@@ -162,11 +161,7 @@ class _DefaultWebViewHostState extends State<_DefaultWebViewHost> {
       );
 
     unawaited(
-      _hardenAndLoad(
-        _controller,
-        widget.html,
-        onError: widget.onLoadError,
-      ),
+      _hardenAndLoad(_controller, widget.html, onError: widget.onLoadError),
     );
   }
 

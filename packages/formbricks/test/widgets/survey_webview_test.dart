@@ -91,10 +91,7 @@ Future<void> _seedConfig({
           },
     'user': {
       'expiresAt': null,
-      'data': {
-        if (language != null) 'language': language,
-        if (userId != null) 'userId': userId,
-      },
+      'data': {'language': ?language, 'userId': ?userId},
     },
     'filteredSurveys': filteredSurveys,
     'status': {'value': 'success', 'expiresAt': null},
@@ -165,8 +162,9 @@ void main() {
     setUp(AppearanceState.instance.reset);
     tearDown(AppearanceState.instance.reset);
 
-    testWidgets('opens light by default and sends no customCss key',
-        (tester) async {
+    testWidgets('opens light by default and sends no customCss key', (
+      tester,
+    ) async {
       await _seedConfig();
       final host = await _present(
         tester,
@@ -178,8 +176,9 @@ void main() {
       expect(host.appearance?.value, 'light');
     });
 
-    testWidgets('opens in the appearance set before display, with the CSS',
-        (tester) async {
+    testWidgets('opens in the appearance set before display, with the CSS', (
+      tester,
+    ) async {
       await _seedConfig(
         settings: {
           'customCss': {'dark': '.w{color:red}'},
@@ -205,8 +204,9 @@ void main() {
       );
     });
 
-    testWidgets('the host can read the value baked into the page',
-        (tester) async {
+    testWidgets('the host can read the value baked into the page', (
+      tester,
+    ) async {
       await _seedConfig();
       AppearanceState.instance.set(FormbricksAppearance.dark);
       final host = await _present(
@@ -223,8 +223,9 @@ void main() {
       expect(host.initialAppearance, 'dark');
     });
 
-    testWidgets('a survey-rendered event is consumed by the host',
-        (tester) async {
+    testWidgets('a survey-rendered event is consumed by the host', (
+      tester,
+    ) async {
       await _seedConfig();
       final host = await _present(
         tester,
@@ -237,8 +238,9 @@ void main() {
       expect(find.byKey(_stub), findsOneWidget); // still showing
     });
 
-    testWidgets('a change while open reaches the host without a reload',
-        (tester) async {
+    testWidgets('a change while open reaches the host without a reload', (
+      tester,
+    ) async {
       await _seedConfig();
       final host = await _present(
         tester,
@@ -261,11 +263,11 @@ void main() {
       final host = _StubHost();
       SurveyStore.instance.setSurvey(survey);
       Widget app(ThemeMode mode) => MaterialApp(
-            themeMode: mode,
-            theme: ThemeData.light(),
-            darkTheme: ThemeData.dark(),
-            home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
-          );
+        themeMode: mode,
+        theme: ThemeData.light(),
+        darkTheme: ThemeData.dark(),
+        home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+      );
 
       await tester.pumpWidget(app(ThemeMode.light));
       await tester.pump();
@@ -285,8 +287,9 @@ void main() {
     // tested in isolation elsewhere, so without these two the line could be
     // deleted with every other test still green — and its failure mode is
     // silent: the survey renders, the values just never arrive.
-    testWidgets('the display-time snapshot reaches the WebView html',
-        (tester) async {
+    testWidgets('the display-time snapshot reaches the WebView html', (
+      tester,
+    ) async {
       await _seedConfig();
       EmbeddedDataStore.instance.set({'plan': 'pro', 'screen': 'checkout'});
 
@@ -301,13 +304,17 @@ void main() {
       );
     });
 
-    testWidgets('a value set during the delay still reaches the survey',
-        (tester) async {
+    testWidgets('a value set during the delay still reaches the survey', (
+      tester,
+    ) async {
       // Pins "read at display, not at mount": the bag is empty when the widget
       // mounts and only filled while the delay timer runs.
       await _seedConfig();
-      final survey =
-          _survey({'id': 's1', 'delay': 2, 'languages': <dynamic>[]});
+      final survey = _survey({
+        'id': 's1',
+        'delay': 2,
+        'languages': <dynamic>[],
+      });
       final host = _StubHost();
       SurveyStore.instance.setSurvey(survey);
       await tester.pumpWidget(
@@ -364,8 +371,9 @@ void main() {
     },
   );
 
-  testWidgets('delay defers presentation until the timer fires',
-      (tester) async {
+  testWidgets('delay defers presentation until the timer fires', (
+    tester,
+  ) async {
     await _seedConfig();
     final survey = _survey({'id': 's1', 'delay': 2, 'languages': <dynamic>[]});
     final host = _StubHost();
@@ -382,29 +390,38 @@ void main() {
     expect(find.byKey(_stub), findsOneWidget);
   });
 
-  testWidgets('unmounting during the delay cancels the timer (no late present)',
-      (tester) async {
-    await _seedConfig();
-    final survey = _survey({'id': 's1', 'delay': 5, 'languages': <dynamic>[]});
-    final host = _StubHost();
-    SurveyStore.instance.setSurvey(survey);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
-      ),
-    );
-    await tester.pump(); // arms the timer
-    await tester.pumpWidget(const MaterialApp(home: SizedBox())); // unmount
-    await tester.pump(const Duration(seconds: 5)); // would have fired
-    expect(find.byKey(_stub), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'unmounting during the delay cancels the timer (no late present)',
+    (tester) async {
+      await _seedConfig();
+      final survey = _survey({
+        'id': 's1',
+        'delay': 5,
+        'languages': <dynamic>[],
+      });
+      final host = _StubHost();
+      SurveyStore.instance.setSurvey(survey);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SurveyWebView(survey: survey, webViewHostBuilder: host.build),
+        ),
+      );
+      await tester.pump(); // arms the timer
+      await tester.pumpWidget(const MaterialApp(home: SizedBox())); // unmount
+      await tester.pump(const Duration(seconds: 5)); // would have fired
+      expect(find.byKey(_stub), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('CloseEvent dismisses the modal and resets the store',
-      (tester) async {
+  testWidgets('CloseEvent dismisses the modal and resets the store', (
+    tester,
+  ) async {
     await _seedConfig();
-    final host =
-        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    final host = await _present(
+      tester,
+      _survey({'id': 's1', 'languages': <dynamic>[]}),
+    );
     expect(find.byKey(_stub), findsOneWidget);
 
     host.onEvent!(const CloseEvent());
@@ -415,11 +432,14 @@ void main() {
     expect(find.byKey(_stub), findsNothing);
   });
 
-  testWidgets('WebView load errors dismiss the modal and reset the store',
-      (tester) async {
+  testWidgets('WebView load errors dismiss the modal and reset the store', (
+    tester,
+  ) async {
     await _seedConfig();
-    final host =
-        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    final host = await _present(
+      tester,
+      _survey({'id': 's1', 'languages': <dynamic>[]}),
+    );
     expect(find.byKey(_stub), findsOneWidget);
 
     host.onLoadError!();
@@ -433,8 +453,9 @@ void main() {
   group('interaction-based segment refresh', () {
     setUp(UpdateQueue.resetInstance);
 
-    testWidgets('FinishedEvent nudges the refresh when the gate allows it',
-        (tester) async {
+    testWidgets('FinishedEvent nudges the refresh when the gate allows it', (
+      tester,
+    ) async {
       await _seedConfig(userId: 'user-1');
       final host = await _present(
         tester,
@@ -452,8 +473,9 @@ void main() {
       UpdateQueue.resetInstance();
     });
 
-    testWidgets('DisplayCreatedEvent nudges the refresh when flagged',
-        (tester) async {
+    testWidgets('DisplayCreatedEvent nudges the refresh when flagged', (
+      tester,
+    ) async {
       await _seedConfig(userId: 'user-1');
       final host = await _present(
         tester,
@@ -483,8 +505,9 @@ void main() {
       expect(UpdateQueue.instance.isEmpty, isTrue);
     });
 
-    testWidgets('the same source refreshes at most once per showing',
-        (tester) async {
+    testWidgets('the same source refreshes at most once per showing', (
+      tester,
+    ) async {
       await _seedConfig(userId: 'user-1');
       final host = await _present(
         tester,
@@ -505,42 +528,48 @@ void main() {
   });
 
   testWidgets(
-      'DisplayCreatedEvent records a display + lastDisplayAt + persists',
-      (tester) async {
-    await _seedConfig();
-    final host =
-        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    'DisplayCreatedEvent records a display + lastDisplayAt + persists',
+    (tester) async {
+      await _seedConfig();
+      final host = await _present(
+        tester,
+        _survey({'id': 's1', 'languages': <dynamic>[]}),
+      );
 
-    Map<String, dynamic>? storedData;
-    await tester.runAsync(() async {
-      host.onEvent!(const DisplayCreatedEvent());
-      await _waitUntil(() async {
-        final data = await _storedUserData();
-        final displays = data['displays'] as List?;
-        return displays != null &&
-            displays.isNotEmpty &&
-            data['lastDisplayAt'] != null;
+      Map<String, dynamic>? storedData;
+      await tester.runAsync(() async {
+        host.onEvent!(const DisplayCreatedEvent());
+        await _waitUntil(() async {
+          final data = await _storedUserData();
+          final displays = data['displays'] as List?;
+          return displays != null &&
+              displays.isNotEmpty &&
+              data['lastDisplayAt'] != null;
+        });
+        storedData = await _storedUserData();
       });
-      storedData = await _storedUserData();
-    });
 
-    // In-memory.
-    final data = FormbricksConfig.instance.get().user.data;
-    expect(data.displays.length, 1);
-    expect(data.displays.single.surveyId, 's1');
-    expect(data.lastDisplayAt, isNotNull);
-    // Persisted to disk (would fail if the prefs write were dropped).
-    final displays = storedData!['displays'] as List;
-    expect(displays, hasLength(1));
-    expect(displays.single['surveyId'], 's1');
-    expect(storedData!['lastDisplayAt'], isNotNull);
-  });
+      // In-memory.
+      final data = FormbricksConfig.instance.get().user.data;
+      expect(data.displays.length, 1);
+      expect(data.displays.single.surveyId, 's1');
+      expect(data.lastDisplayAt, isNotNull);
+      // Persisted to disk (would fail if the prefs write were dropped).
+      final displays = storedData!['displays'] as List;
+      expect(displays, hasLength(1));
+      expect(displays.single['surveyId'], 's1');
+      expect(storedData!['lastDisplayAt'], isNotNull);
+    },
+  );
 
-  testWidgets('ResponseCreatedEvent appends the survey id + persists',
-      (tester) async {
+  testWidgets('ResponseCreatedEvent appends the survey id + persists', (
+    tester,
+  ) async {
     await _seedConfig();
-    final host =
-        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    final host = await _present(
+      tester,
+      _survey({'id': 's1', 'languages': <dynamic>[]}),
+    );
 
     Map<String, dynamic>? storedData;
     await tester.runAsync(() async {
@@ -559,63 +588,69 @@ void main() {
     expect(storedData!['responses'], ['s1']); // persisted to disk
   });
 
-  testWidgets('DisplayCreatedEvent refilters — a displayOnce survey drops out',
-      (tester) async {
-    final surveyJson = {
-      'id': 's1',
-      'displayOption': 'displayOnce',
-      'triggers': <dynamic>[],
-      'languages': <dynamic>[],
-    };
-    await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
-    final host = await _present(tester, _survey(surveyJson));
+  testWidgets(
+    'DisplayCreatedEvent refilters — a displayOnce survey drops out',
+    (tester) async {
+      final surveyJson = {
+        'id': 's1',
+        'displayOption': 'displayOnce',
+        'triggers': <dynamic>[],
+        'languages': <dynamic>[],
+      };
+      await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
+      final host = await _present(tester, _survey(surveyJson));
 
-    await tester.runAsync(() async {
-      host.onEvent!(const DisplayCreatedEvent());
-      await _waitUntil(() async {
-        final data = await _storedUserData();
-        return (data['displays'] as List?)?.isNotEmpty ?? false;
+      await tester.runAsync(() async {
+        host.onEvent!(const DisplayCreatedEvent());
+        await _waitUntil(() async {
+          final data = await _storedUserData();
+          return (data['displays'] as List?)?.isNotEmpty ?? false;
+        });
       });
-    });
 
-    expect(
-      FormbricksConfig.instance.get().filteredSurveys,
-      isEmpty,
-      reason: 'the just-displayed displayOnce survey must leave the '
-          'eligible set immediately',
-    );
-  });
+      expect(
+        FormbricksConfig.instance.get().filteredSurveys,
+        isEmpty,
+        reason:
+            'the just-displayed displayOnce survey must leave the '
+            'eligible set immediately',
+      );
+    },
+  );
 
   testWidgets(
-      'ResponseCreatedEvent refilters — a displayMultiple survey drops out',
-      (tester) async {
-    final surveyJson = {
-      'id': 's1',
-      'displayOption': 'displayMultiple',
-      'triggers': <dynamic>[],
-      'languages': <dynamic>[],
-    };
-    await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
-    final host = await _present(tester, _survey(surveyJson));
+    'ResponseCreatedEvent refilters — a displayMultiple survey drops out',
+    (tester) async {
+      final surveyJson = {
+        'id': 's1',
+        'displayOption': 'displayMultiple',
+        'triggers': <dynamic>[],
+        'languages': <dynamic>[],
+      };
+      await _seedConfig(surveys: [surveyJson], filteredSurveys: [surveyJson]);
+      final host = await _present(tester, _survey(surveyJson));
 
-    await tester.runAsync(() async {
-      host.onEvent!(const ResponseCreatedEvent());
-      await _waitUntil(() async {
-        final data = await _storedUserData();
-        return (data['responses'] as List?)?.isNotEmpty ?? false;
+      await tester.runAsync(() async {
+        host.onEvent!(const ResponseCreatedEvent());
+        await _waitUntil(() async {
+          final data = await _storedUserData();
+          return (data['responses'] as List?)?.isNotEmpty ?? false;
+        });
       });
-    });
 
-    expect(
-      FormbricksConfig.instance.get().filteredSurveys,
-      isEmpty,
-      reason: 'the just-answered displayMultiple survey must leave the '
-          'eligible set immediately',
-    );
-  });
+      expect(
+        FormbricksConfig.instance.get().filteredSurveys,
+        isEmpty,
+        reason:
+            'the just-answered displayMultiple survey must leave the '
+            'eligible set immediately',
+      );
+    },
+  );
 
-  testWidgets('DisplayCreatedEvent refilter keeps still-eligible surveys',
-      (tester) async {
+  testWidgets('DisplayCreatedEvent refilter keeps still-eligible surveys', (
+    tester,
+  ) async {
     final shown = {
       'id': 's1',
       'displayOption': 'displayOnce',
@@ -653,18 +688,14 @@ void main() {
     );
   });
 
-  testWidgets(
-      'DisplayCreatedEvent without a workspace empties filteredSurveys '
+  testWidgets('DisplayCreatedEvent without a workspace empties filteredSurveys '
       'without throwing', (tester) async {
     final surveyJson = {
       'id': 's1',
       'triggers': <dynamic>[],
       'languages': <dynamic>[],
     };
-    await _seedConfig(
-      omitWorkspace: true,
-      filteredSurveys: [surveyJson],
-    );
+    await _seedConfig(omitWorkspace: true, filteredSurveys: [surveyJson]);
     final host = await _present(tester, _survey(surveyJson));
 
     await tester.runAsync(() async {
@@ -679,8 +710,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('OpenExternalUrlEvent launches via the injected launcher',
-      (tester) async {
+  testWidgets('OpenExternalUrlEvent launches via the injected launcher', (
+    tester,
+  ) async {
     await _seedConfig();
     final launched = <Uri>[];
     Future<bool> fakeLaunch(
@@ -737,27 +769,33 @@ void main() {
     }
 
     testWidgets(
-        'non-overlay: taps outside the card reach the host, inside hit the card',
-        (tester) async {
-      await _seedConfig(); // no overlay configured → box-none
-      final r = await presentOver(
-        tester,
-        _survey({'id': 's1', 'languages': <dynamic>[]}),
-      );
-      // Card occupies the top-left 100x100; everything else is pass-through.
-      r.host.onEvent!(const GeometryEvent(Rect.fromLTWH(0, 0, 100, 100)));
-      await tester.pump();
+      'non-overlay: taps outside the card reach the host, inside hit the card',
+      (tester) async {
+        await _seedConfig(); // no overlay configured → box-none
+        final r = await presentOver(
+          tester,
+          _survey({'id': 's1', 'languages': <dynamic>[]}),
+        );
+        // Card occupies the top-left 100x100; everything else is pass-through.
+        r.host.onEvent!(const GeometryEvent(Rect.fromLTWH(0, 0, 100, 100)));
+        await tester.pump();
 
-      await tester.tapAt(const Offset(400, 400)); // outside the card
-      await tester.tapAt(const Offset(50, 50)); // inside the card
-      await tester.pump();
+        await tester.tapAt(const Offset(400, 400)); // outside the card
+        await tester.tapAt(const Offset(50, 50)); // inside the card
+        await tester.pump();
 
-      expect(r.hostTaps(), 1, reason: 'outside-card tap falls through to host');
-      expect(r.host.taps, 1, reason: 'inside-card tap hits the WebView');
-    });
+        expect(
+          r.hostTaps(),
+          1,
+          reason: 'outside-card tap falls through to host',
+        );
+        expect(r.host.taps, 1, reason: 'inside-card tap hits the WebView');
+      },
+    );
 
-    testWidgets('non-overlay before geometry arrives: the survey takes the tap',
-        (tester) async {
+    testWidgets('non-overlay before geometry arrives: the survey takes the tap', (
+      tester,
+    ) async {
       await _seedConfig();
       final r = await presentOver(
         tester,
@@ -777,8 +815,9 @@ void main() {
       expect(r.host.taps, 1, reason: 'the survey must stay usable');
     });
 
-    testWidgets('non-overlay after the card leaves: taps pass through again',
-        (tester) async {
+    testWidgets('non-overlay after the card leaves: taps pass through again', (
+      tester,
+    ) async {
       await _seedConfig();
       final r = await presentOver(
         tester,
@@ -800,8 +839,9 @@ void main() {
       expect(r.host.taps, 0);
     });
 
-    testWidgets('overlay (backdrop): the survey blocks the whole host',
-        (tester) async {
+    testWidgets('overlay (backdrop): the survey blocks the whole host', (
+      tester,
+    ) async {
       await _seedConfig(settings: {'overlay': 'dark'});
       final r = await presentOver(
         tester,
@@ -817,11 +857,14 @@ void main() {
     });
   });
 
-  testWidgets('a response immediately followed by close keeps the response',
-      (tester) async {
+  testWidgets('a response immediately followed by close keeps the response', (
+    tester,
+  ) async {
     await _seedConfig();
-    final host =
-        await _present(tester, _survey({'id': 's1', 'languages': <dynamic>[]}));
+    final host = await _present(
+      tester,
+      _survey({'id': 's1', 'languages': <dynamic>[]}),
+    );
 
     Map<String, dynamic>? storedData;
     await tester.runAsync(() async {
