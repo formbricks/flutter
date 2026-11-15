@@ -85,6 +85,7 @@ expect_changelog "an existing entry for the version is not duplicated" "$before"
 
 # --- Notes edited in the GitHub UI: CRLF, an H1, and a fenced code block. ---
 main_changelog
+# shellcheck disable=SC2016 # literal Markdown, nothing to expand
 printf '# Highlights\r\n\r\n```bash\r\n# not a heading\r\n```\r\n\r\n## What'"'"'s Changed\r\n* fix: x\r\n' > "$work/notes.md"
 bash "$script" "$work/CHANGELOG.md" "1.4.0" "$work/notes.md" "$url" > /dev/null 2>&1 ||
   fail "CRLF notes exited non-zero"

@@ -48,7 +48,8 @@ stub_pid=$!
 disown "$stub_pid"
 trap 'kill "$stub_pid" 2>/dev/null; rm -rf "$work"' EXIT
 for _ in $(seq 50); do [[ -s "$work/port" ]] && break; sleep 0.1; done
-export PUB_HOSTED_URL="http://127.0.0.1:$(cat "$work/port")"
+PUB_HOSTED_URL="http://127.0.0.1:$(cat "$work/port")"
+export PUB_HOSTED_URL
 
 registry_has() {
   # registry_has <path> <status> <json body>
