@@ -349,6 +349,20 @@ jobs:
             echo "::endgroup::"
           done
 
+  e2e-tests:
+    name: e2e-tests
+    # FORMBRICKS_QA_LICENSE_KEY isn't available to fork PRs. PR Check Summary
+    # allows this skip under the same condition.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # A called workflow can't exceed these; its iOS jobs poll the run's artifacts.
+    permissions:
+      contents: read
+      actions: read
+    # actionlint 1.7.12 rejects the `$/` form zizmor suggests.
+    uses: ./.github/workflows/e2e.yml # zizmor: ignore[self-repository]
+    secrets:
+      FORMBRICKS_QA_LICENSE_KEY: ${{ secrets.FORMBRICKS_QA_LICENSE_KEY }}
+
   pr-check-summary:
     name: PR Check Summary
     if: always()
@@ -361,6 +375,7 @@ jobs:
       - sonarqube
       - dependency-review
       - workflow-lint
+      - e2e-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
