@@ -4,16 +4,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "pub"
     directory: "/packages/formbricks"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "pub"
     directory: "/apps/playground"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
 
   # Android build: Gradle/Kotlin/Android plugin versions in settings.gradle.kts.
   # Complements (does not replace) the dependency-graph submission in
@@ -23,8 +29,12 @@ updates:
     directory: "/apps/playground/android"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
