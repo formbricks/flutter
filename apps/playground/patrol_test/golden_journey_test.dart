@@ -231,18 +231,6 @@ Future<void> _dumpNativeTree(PatrolIntegrationTester $) async {
   }
 }
 
-const _nodeFields = [
-  'className',
-  'elementType',
-  'text',
-  'label',
-  'value',
-  'placeholderValue',
-  'contentDescription',
-  'resourceName',
-  'identifier',
-];
-
 void _printNodes(Object? node, int depth) {
   if (node is List) {
     for (final child in node) {
@@ -250,18 +238,24 @@ void _printNodes(Object? node, int depth) {
     }
   } else if (node is Map) {
     final fields = [
-      for (final field in _nodeFields)
-        if (node[field] case final Object value when '$value'.isNotEmpty)
-          '$field=$value',
+      for (final entry in node.entries)
+        if (_describeField(entry.value) case final String value)
+          '${entry.key}=$value',
     ];
     if (fields.isNotEmpty) debugPrint('${'  ' * depth}${fields.join(' ')}');
     for (final entry in node.entries) {
-      if (entry.value is List || entry.value is Map) {
-        _printNodes(entry.value, depth + 1);
-      }
+      if (entry.value is List) _printNodes(entry.value, depth + 1);
     }
   }
 }
+
+/// Every set field of a node, so the log shows why a selector missed it
+/// (visibility, bounds, class). Empty strings and false flags are noise.
+String? _describeField(Object? value) => switch (value) {
+  null || false || '' || List() => null,
+  Map() => jsonEncode(value),
+  _ => '$value',
+};
 
 class _NotFound implements Exception {
   _NotFound(this.candidates);

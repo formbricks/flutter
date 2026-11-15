@@ -47,7 +47,7 @@ attempt() {
   log "Golden journey, attempt ${n}"
   patrol_in_playground "$@" 2>&1 | tee "${dir}/patrol.log" || status=$?
   "${platform}_device_log" >"${dir}/device.log" 2>&1 || true
-  for results in build/app/outputs/androidTest-results build/ios_results; do
+  for results in build/app/outputs/androidTest-results build/ios_results patrol_test/videos; do
     [[ -e "${E2E_PLAYGROUND_DIR}/${results}" ]] && cp -R "${E2E_PLAYGROUND_DIR}/${results}" "${dir}/" || true
   done
   return "${status}"
@@ -88,7 +88,7 @@ case "${1:-}" in
   android)
     write_defines "${E2E_ANDROID_APP_URL}"
     adb logcat -c || true
-    run_with_one_retry android test
+    run_with_one_retry android test --record-video
     ;;
   ios-build)
     pick_and_boot_simulator
@@ -103,7 +103,7 @@ case "${1:-}" in
     udid="$(cut -f1 "${simulator_file}")"
     os="$(cut -f2 "${simulator_file}")"
     write_defines "${E2E_APP_URL}"
-    run_with_one_retry ios test --device "${udid}" --ios "${os}"
+    run_with_one_retry ios test --device "${udid}" --ios "${os}" --record-video
     ;;
   *)
     echo "usage: $0 android-build|android|ios-build|ios" >&2
