@@ -5,6 +5,17 @@ const String _defaultAppUrl = String.fromEnvironment('APP_URL');
 const String _defaultWorkspaceId = String.fromEnvironment('WORKSPACE_ID');
 
 const String kWelcomeMessage = 'Welcome to Formbricks';
+
+// Keys the golden journey (patrol_test/) finds widgets by.
+const Key kConnectionStatusKey = Key('connectionStatus');
+const Key kUserIdFieldKey = Key('userIdField');
+const Key kSetUserIdButtonKey = Key('setUserIdButton');
+const Key kAttributeKeyFieldKey = Key('attributeKeyField');
+const Key kAttributeValueFieldKey = Key('attributeValueField');
+const Key kSetAttributeButtonKey = Key('setAttributeButton');
+const Key kActionFieldKey = Key('actionField');
+const Key kTrackButtonKey = Key('trackButton');
+const Key kLastTrackKey = Key('lastTrack');
 const String _statusConnected = 'connected ✓';
 
 /// The app's own theme mode, so the demo can show `FormbricksAppearance.system`
@@ -60,6 +71,15 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
   final TextEditingController _codeController = TextEditingController(
     text: 'code',
   );
+  final TextEditingController _userIdController = TextEditingController(
+    text: 'playground-user',
+  );
+  final TextEditingController _attributeKeyController = TextEditingController(
+    text: 'plan',
+  );
+  final TextEditingController _attributeValueController = TextEditingController(
+    text: 'pro',
+  );
 
   String _status = 'not connected';
   bool _connected = false;
@@ -82,6 +102,9 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
     _appUrlController.dispose();
     _workspaceIdController.dispose();
     _codeController.dispose();
+    _userIdController.dispose();
+    _attributeKeyController.dispose();
+    _attributeValueController.dispose();
     super.dispose();
   }
 
@@ -228,20 +251,26 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
 
   @override
   Widget build(BuildContext context) {
+    final userId = _userIdController.text.trim();
+    final attributeKey = _attributeKeyController.text.trim();
+    final attributeValue = _attributeValueController.text.trim();
     final identityActions =
         <
           ({
+            Key? key,
             String label,
             String action,
             Future<Result<void, FormbricksError>> Function() op,
           })
         >[
           (
+            key: kSetUserIdButtonKey,
             label: 'Set userId',
-            action: "setUserId('playground-user')",
-            op: () => Formbricks.setUserId('playground-user'),
+            action: "setUserId('$userId')",
+            op: () => Formbricks.setUserId(userId),
           ),
           (
+            key: null,
             label: 'Set User Attributes (multiple)',
             action: 'setAttributes({plan, mrr, signup_date})',
             op: () => Formbricks.setAttributes({
@@ -251,16 +280,23 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
             }),
           ),
           (
+            key: kSetAttributeButtonKey,
             label: 'Set User Attribute (single)',
-            action: "setAttribute('source', 'playground')",
-            op: () => Formbricks.setAttribute('source', 'playground'),
+            action: "setAttribute('$attributeKey', '$attributeValue')",
+            op: () => Formbricks.setAttribute(attributeKey, attributeValue),
           ),
           (
+            key: null,
             label: 'Set Language (de)',
             action: "setLanguage('de')",
             op: () => Formbricks.setLanguage('de'),
           ),
-          (label: 'Logout', action: 'logout()', op: Formbricks.logout),
+          (
+            key: null,
+            label: 'Logout',
+            action: 'logout()',
+            op: Formbricks.logout,
+          ),
         ];
     final textTheme = Theme.of(context).textTheme;
 
@@ -306,6 +342,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ),
                 const SizedBox(height: 8),
                 Text(
+                  key: kConnectionStatusKey,
                   _connected
                       ? 'Connected to $_connectedWorkspaceId @ $_connectedAppUrl'
                       : 'status: $_status',
@@ -355,6 +392,7 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 Text('Track a code action', style: textTheme.titleSmall),
                 const SizedBox(height: 8),
                 TextField(
+                  key: kActionFieldKey,
                   controller: _codeController,
                   autocorrect: false,
                   decoration: const InputDecoration(
@@ -366,20 +404,67 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
+                  key: kTrackButtonKey,
                   onPressed: () => _track(context),
                   child: const Text('Trigger Code Action'),
                 ),
                 if (_lastTrack != null) ...[
                   const SizedBox(height: 8),
                   Text(
+                    key: kLastTrackKey,
                     _lastTrack!,
                     textAlign: TextAlign.center,
                     style: textTheme.bodySmall,
                   ),
                 ],
                 const Divider(height: 40),
+
+                Text('Identify the user', style: textTheme.titleSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  key: kUserIdFieldKey,
+                  controller: _userIdController,
+                  autocorrect: false,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'User ID',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: kAttributeKeyFieldKey,
+                        controller: _attributeKeyController,
+                        autocorrect: false,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          labelText: 'Attribute key',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        key: kAttributeValueFieldKey,
+                        controller: _attributeValueController,
+                        autocorrect: false,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          labelText: 'Attribute value',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 for (final a in identityActions) ...[
                   FilledButton.tonal(
+                    key: a.key,
                     onPressed: _connected
                         ? () => _runAction(context, a.action, a.op)
                         : null,

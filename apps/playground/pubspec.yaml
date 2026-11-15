@@ -45,8 +45,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
+  # Drives the golden journey (patrol_test/), including taps inside the
+  # survey's native WebView. Run it with patrol_cli, not `flutter test`.
+  patrol: ^4.11.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -54,6 +55,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+# Patrol (the E2E golden journey in patrol_test/; see README.md).
+patrol:
+  app_name: Formbricks Flutter Playground
+  test_directory: patrol_test
+  android:
+    package_name: com.formbricks.formbricks_playground
+  ios:
+    bundle_id: com.formbricks.formbricksPlayground
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
