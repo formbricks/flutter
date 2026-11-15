@@ -3,6 +3,9 @@
 SDK_DIR := packages/formbricks
 PLAYGROUND_DIR := apps/playground
 TEST_RESULTS_DIR := test-results
+# dart format takes each package's language version from this file; without it
+# (or when it is stale) it formats with the SDK's newest style instead.
+PACKAGE_CONFIG := .dart_tool/package_config.json
 PLATFORMS := ios android
 PLATFORM_GOAL := $(firstword $(filter $(PLATFORMS),$(MAKECMDGOALS)))
 PLATFORM ?=
@@ -76,7 +79,10 @@ analyze lint:
 analyze-ci:
 	$(FLUTTER) analyze --fatal-infos --fatal-warnings
 
-format:
+$(PACKAGE_CONFIG): pubspec.yaml pubspec.lock $(SDK_DIR)/pubspec.yaml $(PLAYGROUND_DIR)/pubspec.yaml
+	$(FLUTTER) pub get --enforce-lockfile
+
+format: $(PACKAGE_CONFIG)
 	$(DART) format .
 	$(MAKE) --no-print-directory format-docs
 
@@ -86,7 +92,7 @@ format-docs:
 format-docs-check:
 	npx -y prettier@3.6.2 --check "**/*.md"
 
-format-check:
+format-check: $(PACKAGE_CONFIG)
 	$(DART) format --output=none --set-exit-if-changed .
 	$(MAKE) --no-print-directory format-docs-check
 
