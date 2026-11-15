@@ -8,7 +8,7 @@
 #
 # Exits 0 only if every job succeeded or was an allowed skip. Writes a table of
 # results to $GITHUB_STEP_SUMMARY when it is set.
-# Tests: .github/scripts/pr-check-summary.test.sh
+# Tests: .github/scripts/pr_check_summary_test.sh
 set -euo pipefail
 
 allowed=" ${ALLOWED_SKIPS:-} "

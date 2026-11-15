@@ -337,11 +337,17 @@ jobs:
           version: 1.32.0
           advanced-security: false
 
-      - name: Shellcheck CI scripts
-        run: shellcheck .github/scripts/*.sh
+      - name: Shellcheck the repo's shell scripts
+        run: shellcheck .github/scripts/*.sh tool/*.sh tool/release/*.sh
 
-      - name: Test the PR Check Summary script
-        run: .github/scripts/pr-check-summary.test.sh
+      # The PR Check Summary decision and the release helpers.
+      - name: Test the shell scripts
+        run: |
+          for t in .github/scripts/*_test.sh tool/release/*_test.sh; do
+            echo "::group::$t"
+            bash "$t"
+            echo "::endgroup::"
+          done
 
   pr-check-summary:
     name: PR Check Summary
@@ -379,4 +385,4 @@ jobs:
           ALLOWED_SKIPS: >-
             ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') && 'sonarqube e2e-tests' || '' }}
             ${{ github.event_name == 'push' && 'dependency-review' || '' }}
-        run: .github/scripts/pr-check-summary.sh
+        run: .github/scripts/pr_check_summary.sh

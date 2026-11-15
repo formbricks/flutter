@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tests for pr-check-summary.sh. Run: .github/scripts/pr-check-summary.test.sh
+# Tests for pr_check_summary.sh. Run: .github/scripts/pr_check_summary_test.sh
 set -uo pipefail
 
-script="$(cd "$(dirname "$0")" && pwd)/pr-check-summary.sh"
+script="$(cd "$(dirname "$0")" && pwd)/pr_check_summary.sh"
 failures=0
 
 summary_file=$(mktemp)
