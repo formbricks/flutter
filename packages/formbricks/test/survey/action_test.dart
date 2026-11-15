@@ -15,18 +15,17 @@ Map<String, dynamic> _surveyJson(
   String id,
   List<String> actionNames, {
   num? displayPercentage,
-}) =>
-    {
-      'id': id,
-      'triggers': [
-        for (final name in actionNames)
-          {
-            'actionClass': {'name': name},
-          },
-      ],
-      'languages': <dynamic>[],
-      if (displayPercentage != null) 'displayPercentage': displayPercentage,
-    };
+}) => {
+  'id': id,
+  'triggers': [
+    for (final name in actionNames)
+      {
+        'actionClass': {'name': name},
+      },
+  ],
+  'languages': <dynamic>[],
+  'displayPercentage': ?displayPercentage,
+};
 
 /// Builds a persisted config. [filteredSurveys] defaults to [surveys].
 String _configJson({
@@ -34,22 +33,21 @@ String _configJson({
   List<Map<String, dynamic>>? filteredSurveys,
   List<Map<String, dynamic>> actionClasses = const [],
   String appUrl = 'https://app.formbricks.com',
-}) =>
-    jsonEncode({
-      'workspaceId': 'wsp_1',
-      'appUrl': appUrl,
-      'workspace': {
-        'expiresAt': '2100-01-01T00:00:00.000',
-        'data': {
-          'surveys': surveys,
-          'actionClasses': actionClasses,
-          'settings': <String, dynamic>{},
-        },
-      },
-      'user': {'expiresAt': null, 'data': <String, dynamic>{}},
-      'filteredSurveys': filteredSurveys ?? surveys,
-      'status': {'value': 'success', 'expiresAt': null},
-    });
+}) => jsonEncode({
+  'workspaceId': 'wsp_1',
+  'appUrl': appUrl,
+  'workspace': {
+    'expiresAt': '2100-01-01T00:00:00.000',
+    'data': {
+      'surveys': surveys,
+      'actionClasses': actionClasses,
+      'settings': <String, dynamic>{},
+    },
+  },
+  'user': {'expiresAt': null, 'data': <String, dynamic>{}},
+  'filteredSurveys': filteredSurveys ?? surveys,
+  'status': {'value': 'success', 'expiresAt': null},
+});
 
 /// A deterministic RNG: every [nextDouble] returns [value].
 class _FixedRandom implements Random {
@@ -76,9 +74,9 @@ Future<FormbricksConfig> _seed(String json) async {
 }
 
 E _errOf<T, E>(Result<T, E> result) => switch (result) {
-      Ok() => fail('expected Err'),
-      Err(:final error) => error,
-    };
+  Ok() => fail('expected Err'),
+  Err(:final error) => error,
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -97,8 +95,11 @@ void main() {
           ],
         ),
       );
-      final result =
-          await track('unknown', config: config, isConnected: () async => true);
+      final result = await track(
+        'unknown',
+        config: config,
+        isConnected: () async => true,
+      );
       final error = _errOf(result);
       expect(error, isA<InvalidCodeError>());
       expect(error.code, FormbricksErrorCode.invalidCode);
@@ -113,8 +114,11 @@ void main() {
           ],
         ),
       );
-      final result =
-          await track('k', config: config, isConnected: () async => false);
+      final result = await track(
+        'k',
+        config: config,
+        isConnected: () async => false,
+      );
       final error = _errOf(result) as NetworkError;
       expect(error.code, FormbricksErrorCode.networkError);
       expect(error.status, 0);
@@ -154,8 +158,11 @@ void main() {
           ],
         ),
       );
-      final result =
-          await track('mycode', config: config, isConnected: () async => true);
+      final result = await track(
+        'mycode',
+        config: config,
+        isConnected: () async => true,
+      );
       expect(result.isOk, isTrue);
       expect(SurveyStore.instance.survey?.id, 's1');
     });
@@ -171,8 +178,11 @@ void main() {
           ],
         ),
       );
-      final result =
-          await track('mycode', config: config, isConnected: () async => true);
+      final result = await track(
+        'mycode',
+        config: config,
+        isConnected: () async => true,
+      );
       expect(result.isOk, isTrue);
       expect(SurveyStore.instance.survey, isNull);
     });
@@ -185,25 +195,33 @@ void main() {
           ],
         ),
       );
-      final result =
-          await track('mycode', config: config, isConnected: () async => true);
+      final result = await track(
+        'mycode',
+        config: config,
+        isConnected: () async => true,
+      );
       expect(_errOf(result), isA<InvalidCodeError>());
     });
 
-    test('a malformed action class is skipped; valid ones still match',
-        () async {
-      final config = await _seed(
-        _configJson(
-          actionClasses: [
-            {'type': 'code', 'name': null},
-            {'id': 'a', 'name': 'Good', 'type': 'code', 'key': 'good'},
-          ],
-        ),
-      );
-      final result =
-          await track('good', config: config, isConnected: () async => true);
-      expect(result.isOk, isTrue);
-    });
+    test(
+      'a malformed action class is skipped; valid ones still match',
+      () async {
+        final config = await _seed(
+          _configJson(
+            actionClasses: [
+              {'type': 'code', 'name': null},
+              {'id': 'a', 'name': 'Good', 'type': 'code', 'key': 'good'},
+            ],
+          ),
+        );
+        final result = await track(
+          'good',
+          config: config,
+          isConnected: () async => true,
+        );
+        expect(result.isOk, isTrue);
+      },
+    );
 
     test('an unexpected internal error → internal_error', () async {
       // An uninitialized config makes `get()` throw, exercising the outer catch.
@@ -221,20 +239,22 @@ void main() {
   });
 
   group('trackAction', () {
-    test('matches across multiple triggers and surveys (last match wins)',
-        () async {
-      final config = await _seed(
-        _configJson(
-          surveys: [
-            _surveyJson('s1', ['X', 'Target']),
-            _surveyJson('s2', ['Target']),
-          ],
-        ),
-      );
-      final result = await trackAction('Target', config: config);
-      expect(result.isOk, isTrue);
-      expect(SurveyStore.instance.survey?.id, 's2');
-    });
+    test(
+      'matches across multiple triggers and surveys (last match wins)',
+      () async {
+        final config = await _seed(
+          _configJson(
+            surveys: [
+              _surveyJson('s1', ['X', 'Target']),
+              _surveyJson('s2', ['Target']),
+            ],
+          ),
+        );
+        final result = await trackAction('Target', config: config);
+        expect(result.isOk, isTrue);
+        expect(SurveyStore.instance.survey?.id, 's2');
+      },
+    );
 
     test('no surveys → ok, logs, no survey set', () async {
       final config = await _seed(_configJson(surveys: const []));
@@ -243,50 +263,56 @@ void main() {
       expect(SurveyStore.instance.survey, isNull);
     });
 
-    test('a malformed survey entry is skipped; valid ones still match',
-        () async {
-      final config = await _seed(
-        _configJson(
-          filteredSurveys: [
-            {'noId': true, 'triggers': <dynamic>[]},
-            _surveyJson('good', ['Target']),
-          ],
-        ),
-      );
-      final result = await trackAction('Target', config: config);
-      expect(result.isOk, isTrue);
-      expect(SurveyStore.instance.survey?.id, 'good');
-    });
+    test(
+      'a malformed survey entry is skipped; valid ones still match',
+      () async {
+        final config = await _seed(
+          _configJson(
+            filteredSurveys: [
+              {'noId': true, 'triggers': <dynamic>[]},
+              _surveyJson('good', ['Target']),
+            ],
+          ),
+        );
+        final result = await trackAction('Target', config: config);
+        expect(result.isOk, isTrue);
+        expect(SurveyStore.instance.survey?.id, 'good');
+      },
+    );
 
-    test('reads filteredSurveys — a raw workspace survey is not triggered',
-        () async {
-      final config = await _seed(
-        _configJson(
-          surveys: [
-            _surveyJson('ineligible', ['Target']),
-          ],
-          filteredSurveys: const [],
-        ),
-      );
-      final result = await trackAction('Target', config: config);
-      expect(result.isOk, isTrue);
-      expect(SurveyStore.instance.survey, isNull);
-    });
+    test(
+      'reads filteredSurveys — a raw workspace survey is not triggered',
+      () async {
+        final config = await _seed(
+          _configJson(
+            surveys: [
+              _surveyJson('ineligible', ['Target']),
+            ],
+            filteredSurveys: const [],
+          ),
+        );
+        final result = await trackAction('Target', config: config);
+        expect(result.isOk, isTrue);
+        expect(SurveyStore.instance.survey, isNull);
+      },
+    );
 
-    test('a filtered survey triggers even when absent from workspace surveys',
-        () async {
-      final config = await _seed(
-        _configJson(
-          surveys: const [],
-          filteredSurveys: [
-            _surveyJson('eligible', ['Target']),
-          ],
-        ),
-      );
-      final result = await trackAction('Target', config: config);
-      expect(result.isOk, isTrue);
-      expect(SurveyStore.instance.survey?.id, 'eligible');
-    });
+    test(
+      'a filtered survey triggers even when absent from workspace surveys',
+      () async {
+        final config = await _seed(
+          _configJson(
+            surveys: const [],
+            filteredSurveys: [
+              _surveyJson('eligible', ['Target']),
+            ],
+          ),
+        );
+        final result = await trackAction('Target', config: config);
+        expect(result.isOk, isTrue);
+        expect(SurveyStore.instance.survey?.id, 'eligible');
+      },
+    );
 
     test('threads the injected RNG into the percentage gate', () async {
       final config = await _seed(
@@ -347,10 +373,7 @@ void main() {
     });
 
     test('a null displayPercentage always sets the survey', () {
-      triggerSurvey(
-        TSurvey.fromJson({'id': 'x'}),
-        random: _FixedRandom(0.999),
-      );
+      triggerSurvey(TSurvey.fromJson({'id': 'x'}), random: _FixedRandom(0.999));
       expect(SurveyStore.instance.survey?.id, 'x');
     });
   });

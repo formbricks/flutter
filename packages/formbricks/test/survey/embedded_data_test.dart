@@ -254,8 +254,9 @@ void main() {
     test('clearEmbeddedData traces both forms', () {
       Formbricks.setEmbeddedData({'plan': 'pro', 'screen': 'product'});
 
-      final removedLines =
-          _captureLogs(() => Formbricks.clearEmbeddedData('plan'));
+      final removedLines = _captureLogs(
+        () => Formbricks.clearEmbeddedData('plan'),
+      );
       expect(removedLines.single, contains('removed "plan"'));
       expect(removedLines.single, contains('the bag now holds [screen]'));
 

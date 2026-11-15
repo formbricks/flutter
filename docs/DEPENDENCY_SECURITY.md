@@ -91,7 +91,7 @@ resolved only by upgrading the Android Gradle Plugin.
 ## Handling findings
 
 Findings appear as Dependabot alerts (Security tab) for the default branch, and
-as a failing `Dependency Review` check when a pull request introduces a
+as a failing `dependency-review` job in CI when a pull request introduces a
 High/Critical vulnerability in Pub packages.
 
 For each High/Critical alert, a person decides:
@@ -126,7 +126,7 @@ release:
 
 ## Limitations
 
-- **Default-branch snapshots only.** `Dependency Review` sees Pub changes on pull
+- **Default-branch snapshots only.** `dependency-review` sees Pub changes on pull
   requests but not Gradle changes. Submitting snapshots for pull requests needs a
   privileged job that verifies the snapshot's commit and ref against the pull
   request, since a forged snapshot could overwrite the default-branch graph.

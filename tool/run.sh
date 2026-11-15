@@ -67,6 +67,8 @@ run_android() {
     echo "Waiting for the emulator to come online..."
     until [[ -n "$(booted_serial)" ]]; do sleep 2; done
     echo "Waiting for the emulator to finish booting..."
+    # The loop runs in the emulator's shell, so it must not expand here.
+    # shellcheck disable=SC2016
     "$adb" -s "$(booted_serial)" wait-for-device shell \
       'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done' 2>/dev/null || true
   fi

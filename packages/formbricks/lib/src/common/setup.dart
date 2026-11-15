@@ -96,7 +96,8 @@ Future<Result<void, FormbricksError>> setup({
   // Retry only after the stored first-setup cooldown expires for this target.
   if (existing != null && existing.status.isError) {
     final expiresAt = existing.status.expiresAt;
-    final sameTarget = existing.workspaceId == workspaceId &&
+    final sameTarget =
+        existing.workspaceId == workspaceId &&
         existing.appUrl == normalizedAppUrl;
     if (sameTarget && expiresAt != null && !isNowExpired(expiresAt)) {
       Logger.debug('Within error cooldown. Skipping setup.');
@@ -118,7 +119,8 @@ Future<Result<void, FormbricksError>> setup({
     isDebug: resolvedLevel == LogLevel.debug,
   );
 
-  final matches = existing != null &&
+  final matches =
+      existing != null &&
       existing.workspace != null &&
       existing.workspaceId == workspaceId &&
       existing.appUrl == normalizedAppUrl;
@@ -139,8 +141,10 @@ Future<Result<void, FormbricksError>> setup({
       final response = await api.getWorkspaceState();
       switch (response) {
         case Ok(:final value):
-          final filteredSurveys =
-              filterSurveys(value, TUserState.defaultNoUserId);
+          final filteredSurveys = filterSurveys(
+            value,
+            TUserState.defaultNoUserId,
+          );
           await config.update(
             TConfig(
               workspaceId: workspaceId,
@@ -281,16 +285,17 @@ Future<void> tearDown({FormbricksConfig? config}) async {
       user: TUserState.defaultNoUserId,
       filteredSurveys: workspace == null
           ? const []
-          : filterSurveys(workspace, TUserState.defaultNoUserId)
-              .map((s) => s.toJson())
-              .toList(),
+          : filterSurveys(
+              workspace,
+              TUserState.defaultNoUserId,
+            ).map((s) => s.toJson()).toList(),
     ),
   );
 }
 
 NetworkError _toNetworkError(ApiErrorResponse error) => NetworkError(
-      message: error.message,
-      status: error.status,
-      url: error.url,
-      responseMessage: error.responseMessage,
-    );
+  message: error.message,
+  status: error.status,
+  url: error.url,
+  responseMessage: error.responseMessage,
+);

@@ -80,21 +80,21 @@ class SurveyHtmlOptions {
 
   /// The `renderSurvey` options object.
   Map<String, dynamic> toRenderOptions() => {
-        'workspaceId': workspaceId,
-        if (contactId != null) 'contactId': contactId,
-        'survey': survey.toJson(),
-        'isBrandingEnabled': isBrandingEnabled,
-        if (styling != null) 'styling': styling,
-        'languageCode': languageCode,
-        if (placement != null) 'placement': placement,
-        'appUrl': appUrl,
-        if (clickOutside != null) 'clickOutside': clickOutside,
-        if (overlay != null) 'overlay': overlay,
-        'isWebEnvironment': false,
-        'hiddenFieldsRecord': hiddenFieldsRecord,
-        'appearance': appearance,
-        if (customCss != null) 'customCss': customCss,
-      };
+    'workspaceId': workspaceId,
+    if (contactId != null) 'contactId': contactId,
+    'survey': survey.toJson(),
+    'isBrandingEnabled': isBrandingEnabled,
+    if (styling != null) 'styling': styling,
+    'languageCode': languageCode,
+    if (placement != null) 'placement': placement,
+    'appUrl': appUrl,
+    if (clickOutside != null) 'clickOutside': clickOutside,
+    if (overlay != null) 'overlay': overlay,
+    'isWebEnvironment': false,
+    'hiddenFieldsRecord': hiddenFieldsRecord,
+    'appearance': appearance,
+    if (customCss != null) 'customCss': customCss,
+  };
 }
 
 /// Builds the full HTML document that loads `surveys.umd.cjs` and renders the

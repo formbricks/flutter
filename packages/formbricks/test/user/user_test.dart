@@ -13,46 +13,45 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A stub API client so the debounced flush never performs real network I/O.
 ApiClient _noopApi() => ApiClient(
-      appUrl: 'https://app.formbricks.com',
-      workspaceId: 'wsp_1',
-      client: MockClient(
-        (_) async => http.Response(
-          jsonEncode({
-            'data': {
-              'state': {'expiresAt': null, 'data': <String, dynamic>{}},
-            },
-          }),
-          200,
-        ),
-      ),
-    );
+  appUrl: 'https://app.formbricks.com',
+  workspaceId: 'wsp_1',
+  client: MockClient(
+    (_) async => http.Response(
+      jsonEncode({
+        'data': {
+          'state': {'expiresAt': null, 'data': <String, dynamic>{}},
+        },
+      }),
+      200,
+    ),
+  ),
+);
 
 String _configJson({
   String? userId,
   List<Map<String, dynamic>> surveys = const [],
   List<Map<String, dynamic>> filteredSurveys = const [],
-}) =>
-    jsonEncode({
-      'workspaceId': 'wsp_1',
-      'appUrl': 'https://app.formbricks.com',
-      'workspace': {
-        'expiresAt': '2100-01-01T00:00:00.000',
-        'data': {
-          'surveys': surveys,
-          'actionClasses': <dynamic>[],
-          'settings': <String, dynamic>{},
-        },
-      },
-      'user': {
-        'expiresAt': null,
-        'data': {
-          'userId': userId,
-          'segments': ['seg_1'],
-        },
-      },
-      'filteredSurveys': filteredSurveys,
-      'status': {'value': 'success', 'expiresAt': null},
-    });
+}) => jsonEncode({
+  'workspaceId': 'wsp_1',
+  'appUrl': 'https://app.formbricks.com',
+  'workspace': {
+    'expiresAt': '2100-01-01T00:00:00.000',
+    'data': {
+      'surveys': surveys,
+      'actionClasses': <dynamic>[],
+      'settings': <String, dynamic>{},
+    },
+  },
+  'user': {
+    'expiresAt': null,
+    'data': {
+      'userId': userId,
+      'segments': ['seg_1'],
+    },
+  },
+  'filteredSurveys': filteredSurveys,
+  'status': {'value': 'success', 'expiresAt': null},
+});
 
 Future<FormbricksConfig> _seed({
   String? userId,

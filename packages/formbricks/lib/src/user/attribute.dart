@@ -44,8 +44,9 @@ Future<Result<void, FormbricksError>> setAttributes(
       Logger.error(error.message);
       return Result.err(error);
     }
-    normalized[key] =
-        value is DateTime ? value.toUtc().toIso8601String() : value;
+    normalized[key] = value is DateTime
+        ? value.toUtc().toIso8601String()
+        : value;
   }
 
   final q = queue ?? UpdateQueue.instance;
@@ -64,5 +65,4 @@ Future<Result<void, FormbricksError>> setAttributes(
 Future<Result<void, FormbricksError>> setLanguage(
   String language, {
   UpdateQueue? queue,
-}) =>
-    setAttributes({'language': language}, queue: queue);
+}) => setAttributes({'language': language}, queue: queue);

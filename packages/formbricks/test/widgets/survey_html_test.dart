@@ -3,12 +3,12 @@ import 'package:formbricks/src/types/survey.dart';
 import 'package:formbricks/src/widgets/survey_html.dart';
 
 TSurvey _survey([Map<String, dynamic>? extra]) => TSurvey.fromJson({
-      'id': 's1',
-      'questions': [
-        {'headline': 'Hi'},
-      ],
-      ...?extra,
-    });
+  'id': 's1',
+  'questions': [
+    {'headline': 'Hi'},
+  ],
+  ...?extra,
+});
 
 SurveyHtmlOptions _opts({
   TSurvey? survey,
@@ -21,40 +21,40 @@ SurveyHtmlOptions _opts({
   String languageCode = 'default',
   String? contactId,
   Map<String, Object> hiddenFieldsRecord = const <String, Object>{},
-}) =>
-    SurveyHtmlOptions(
-      survey: survey ?? _survey(),
-      appUrl: appUrl,
-      workspaceId: 'wsp_1',
-      isBrandingEnabled: branding,
-      languageCode: languageCode,
-      styling: styling,
-      placement: placement,
-      clickOutside: clickOutside,
-      overlay: overlay,
-      contactId: contactId,
-      hiddenFieldsRecord: hiddenFieldsRecord,
-    );
+}) => SurveyHtmlOptions(
+  survey: survey ?? _survey(),
+  appUrl: appUrl,
+  workspaceId: 'wsp_1',
+  isBrandingEnabled: branding,
+  languageCode: languageCode,
+  styling: styling,
+  placement: placement,
+  clickOutside: clickOutside,
+  overlay: overlay,
+  contactId: contactId,
+  hiddenFieldsRecord: hiddenFieldsRecord,
+);
 
 void main() {
   group('buildSurveyHtml', () {
     test(
-        'includes script url, renderSurvey, all 5 callbacks, shim & window.open',
-        () {
-      final html = buildSurveyHtml(_opts());
-      expect(html, contains('https://app.formbricks.com/js/surveys.umd.cjs'));
-      expect(html, contains('const runtime = window.formbricksSurveys'));
-      expect(html, contains('runtime.renderSurvey'));
-      expect(html, contains('onDisplayCreated'));
-      expect(html, contains('onResponseCreated'));
-      expect(html, contains('onClose'));
-      expect(html, contains('getSetIsResponseSendingFinished'));
-      expect(html, contains('getSetIsError'));
-      expect(html, contains('function postFormbricksMessage'));
-      expect(html, contains('window.open = function'));
-      expect(html, contains('Formbricks.postMessage'));
-      expect(html, contains('"isWebEnvironment":false'));
-    });
+      'includes script url, renderSurvey, all 5 callbacks, shim & window.open',
+      () {
+        final html = buildSurveyHtml(_opts());
+        expect(html, contains('https://app.formbricks.com/js/surveys.umd.cjs'));
+        expect(html, contains('const runtime = window.formbricksSurveys'));
+        expect(html, contains('runtime.renderSurvey'));
+        expect(html, contains('onDisplayCreated'));
+        expect(html, contains('onResponseCreated'));
+        expect(html, contains('onClose'));
+        expect(html, contains('getSetIsResponseSendingFinished'));
+        expect(html, contains('getSetIsError'));
+        expect(html, contains('function postFormbricksMessage'));
+        expect(html, contains('window.open = function'));
+        expect(html, contains('Formbricks.postMessage'));
+        expect(html, contains('"isWebEnvironment":false'));
+      },
+    );
 
     test('bridges onFinished and hands it to renderSurvey', () {
       final html = buildSurveyHtml(_opts());
@@ -113,8 +113,9 @@ void main() {
     test('reports the render once renderSurvey has returned', () {
       final html = buildSurveyHtml(_opts());
       final render = html.indexOf('runtime.renderSurvey(surveyProps);');
-      final rendered =
-          html.indexOf('postFormbricksMessage({ onSurveyRendered: true })');
+      final rendered = html.indexOf(
+        'postFormbricksMessage({ onSurveyRendered: true })',
+      );
 
       expect(render, isNonNegative);
       expect(rendered, greaterThan(render));
@@ -128,8 +129,9 @@ void main() {
     });
 
     test('embeds the full survey JSON incl. unmodelled fields', () {
-      final html =
-          buildSurveyHtml(_opts(survey: _survey({'customField': 'XYZ'})));
+      final html = buildSurveyHtml(
+        _opts(survey: _survey({'customField': 'XYZ'})),
+      );
       expect(html, contains('customField'));
       expect(html, contains('XYZ'));
     });
@@ -206,10 +208,7 @@ void main() {
     });
 
     test('is an empty object when the host set nothing', () {
-      expect(
-        buildSurveyHtml(_opts()),
-        contains('"hiddenFieldsRecord":{}'),
-      );
+      expect(buildSurveyHtml(_opts()), contains('"hiddenFieldsRecord":{}'));
     });
   });
 

@@ -65,13 +65,10 @@ String? getLanguageCode(TSurvey survey, [String? language]) {
 }
 
 /// Resolves the styling object to hand the survey runtime.
-Map<String, dynamic> getStyling(
-  Map<String, dynamic> settings,
-  TSurvey survey,
-) {
+Map<String, dynamic> getStyling(Map<String, dynamic> settings, TSurvey survey) {
   final workspaceStyling =
       (settings['styling'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
+      const <String, dynamic>{};
 
   if (workspaceStyling['allowStyleOverwrite'] == true) {
     final surveyStyling = survey.styling;
