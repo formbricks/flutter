@@ -87,14 +87,16 @@ Future<void> _journey(PatrolIntegrationTester $) async {
     what: 'the SDK to set up',
   );
 
-  _step('setUserId($_userId)');
-  await $(kUserIdFieldKey).scrollTo().enterText(_userId);
-  await $(kSetUserIdButtonKey).scrollTo().tap();
-  await $("setUserId('$_userId') -> ok").waitUntilVisible();
+  if (!const bool.fromEnvironment('E2E_EXPERIMENT_ANON')) {
+    _step('setUserId($_userId)');
+    await $(kUserIdFieldKey).scrollTo().enterText(_userId);
+    await $(kSetUserIdButtonKey).scrollTo().tap();
+    await $("setUserId('$_userId') -> ok").waitUntilVisible();
 
-  _step('setAttribute(plan, pro)');
-  await $(kSetAttributeButtonKey).scrollTo().tap();
-  await $("setAttribute('plan', 'pro') -> ok").waitUntilVisible();
+    _step('setAttribute(plan, pro)');
+    await $(kSetAttributeButtonKey).scrollTo().tap();
+    await $("setAttribute('plan', 'pro') -> ok").waitUntilVisible();
+  }
 
   _step('track($_actionKey) until the survey shows');
   await $(kActionFieldKey).scrollTo().enterText(_actionKey);
