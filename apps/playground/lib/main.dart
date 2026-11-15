@@ -389,36 +389,6 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                 ),
                 const Divider(height: 40),
 
-                Text('Track a code action', style: textTheme.titleSmall),
-                const SizedBox(height: 8),
-                TextField(
-                  key: kActionFieldKey,
-                  controller: _codeController,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Code action key',
-                    helperText:
-                        'Must match a code action that triggers a live survey',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  key: kTrackButtonKey,
-                  onPressed: () => _track(context),
-                  child: const Text('Trigger Code Action'),
-                ),
-                if (_lastTrack != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    key: kLastTrackKey,
-                    _lastTrack!,
-                    textAlign: TextAlign.center,
-                    style: textTheme.bodySmall,
-                  ),
-                ],
-                const Divider(height: 40),
-
                 Text('Identify the user', style: textTheme.titleSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -473,6 +443,35 @@ class _PlaygroundHomeState extends State<PlaygroundHome> {
                   const SizedBox(height: 12),
                 ],
 
+                const Divider(height: 40),
+                Text('Track a code action', style: textTheme.titleSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  key: kActionFieldKey,
+                  controller: _codeController,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Code action key',
+                    helperText:
+                        'Must match a code action that triggers a live survey',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  key: kTrackButtonKey,
+                  onPressed: () => _track(context),
+                  child: const Text('Trigger Code Action'),
+                ),
+                if (_lastTrack != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    key: kLastTrackKey,
+                    _lastTrack!,
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodySmall,
+                  ),
+                ],
                 const Divider(height: 40),
                 Text('Local storage', style: textTheme.titleSmall),
                 const SizedBox(height: 8),
