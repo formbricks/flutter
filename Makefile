@@ -141,7 +141,7 @@ pana-install:
 	$(DART) pub global activate pana
 
 pana:
-	$(DART) pub global run pana --no-warning --exit-code-threshold 30 $(SDK_DIR)
+	$(DART) pub global run pana --no-warning --exit-code-threshold 0 $(SDK_DIR)
 
 pub-publish-dry-run:
 	cd $(SDK_DIR) && $(FLUTTER) pub publish --dry-run
