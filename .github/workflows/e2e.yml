@@ -7,9 +7,10 @@ name: E2E
 # - `android`: one Linux job boots and seeds the server (e2e/server), then runs the journey on an
 #   emulator that reaches it at http://10.0.2.2:3000.
 # - `server` + `ios`: GitHub's macOS runners cannot run Docker, so the Linux job opens a Cloudflare
-#   quick tunnel to its server (e2e/tunnel) and the two jobs, side by side with no `needs`, swap run
-#   artifacts: the tunnel URL one way, the journey's result the other. A job's outputs only publish
-#   when it ends, which is why the hand-off uses artifacts.
+#   quick tunnel to its server (e2e/tunnel) and the two jobs, side by side with no `needs` between
+#   them, swap run artifacts: the tunnel URL one way, the journey's result the other. A job's
+#   outputs only publish when it ends, which is why the hand-off uses artifacts.
+# - `server-version` checks the image tag once, before the other three start.
 on:
   workflow_call:
     inputs:
@@ -33,7 +34,6 @@ permissions:
   actions: read # the iOS pair polls the run's artifacts for each other's hand-off
 
 env:
-  FORMBRICKS_VERSION: ${{ inputs.server_version || 'latest' }}
   # Unique per attempt; the retry inside the journey step reuses it, which the survey allows. Android
   # and iOS use the same value against two separate servers.
   E2E_USER_ID: qa-user-${{ github.run_id }}-${{ github.run_attempt }}
@@ -44,10 +44,38 @@ env:
   PATROL_ANALYTICS_ENABLED: "false"
 
 jobs:
+  # Checks the image tag once; the jobs that start a server read it from here.
+  server-version:
+    name: Server version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check the server version
+        id: check
+        env:
+          SERVER_VERSION: ${{ inputs.server_version || 'latest' }}
+        run: |
+          if [[ ! "${SERVER_VERSION}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::server_version '${SERVER_VERSION}' is not a valid image tag"
+            exit 1
+          fi
+          echo "version=${SERVER_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Testing against ghcr.io/formbricks/formbricks:${SERVER_VERSION}"
+
   android:
     name: Golden journey (Patrol, Android)
+    needs: server-version
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      FORMBRICKS_VERSION: ${{ needs.server-version.outputs.version }}
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
@@ -58,19 +86,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Check the server version
-        run: |
-          if [[ ! "${FORMBRICKS_VERSION}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-            echo "::error::server_version '${FORMBRICKS_VERSION}' is not a valid image tag"
-            exit 1
-          fi
-          echo "Testing against ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION}"
-
-      - name: Test the harness scripts
-        run: |
-          e2e/server/test/lib.test.sh
-          e2e/flutter/test/lib.test.sh
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -153,9 +168,11 @@ jobs:
 
   server:
     name: Server and tunnel for iOS (Linux)
+    needs: server-version
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
+      FORMBRICKS_VERSION: ${{ needs.server-version.outputs.version }}
       CLOUDFLARED_VERSION: 2026.10.7
       CLOUDFLARED_SHA256: 1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872
     steps:
@@ -168,19 +185,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Check the server version
-        run: |
-          if [[ ! "${FORMBRICKS_VERSION}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-            echo "::error::server_version '${FORMBRICKS_VERSION}' is not a valid image tag"
-            exit 1
-          fi
-          echo "Testing against ghcr.io/formbricks/formbricks:${FORMBRICKS_VERSION}"
-
-      - name: Test the harness scripts
-        run: |
-          e2e/server/test/lib.test.sh
-          e2e/tunnel/test/lib.test.sh
 
       - name: Install cloudflared
         run: |
@@ -264,6 +268,9 @@ jobs:
 
   ios:
     name: Golden journey (Patrol, iOS)
+    # Only so a bad server_version stops it too, instead of it waiting for a
+    # server that never starts.
+    needs: server-version
     runs-on: macos-26
     timeout-minutes: 50
     env:
@@ -278,9 +285,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Test the harness scripts
-        run: e2e/flutter/test/lib.test.sh
 
       - name: Select Xcode
         # xcode-select, not DEVELOPER_DIR, so the simulator service follows it too.
