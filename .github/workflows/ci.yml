@@ -231,9 +231,9 @@ jobs:
 
   sonarqube:
     name: sonarqube
-    # SONAR_TOKEN isn't available to fork or Dependabot PRs. PR Check Summary
-    # allows this skip under the same condition.
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # SONAR_TOKEN isn't available to fork PRs. PR Check Summary allows this
+    # skip under the same condition.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -353,7 +353,7 @@ jobs:
     name: e2e-tests
     # ENTERPRISE_LICENSE_KEY isn't available to fork PRs. PR Check Summary
     # allows this skip under the same condition.
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     # A called workflow can't exceed these; its iOS jobs poll the run's artifacts.
     permissions:
       contents: read
@@ -392,12 +392,10 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/scripts
 
-      # Allowed skips: Sonar and E2E on fork and Dependabot PRs (no secrets),
-      # and dependency review on pushes to main (nothing to compare).
+      # .github/scripts/pr_check_summary.sh decides which skips are allowed.
       - name: Check job results
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
-          ALLOWED_SKIPS: >-
-            ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') && 'sonarqube e2e-tests' || '' }}
-            ${{ github.event_name == 'push' && 'dependency-review' || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: .github/scripts/pr_check_summary.sh
