@@ -28,8 +28,7 @@ write_defines() {
 
 patrol_in_playground() {
   (cd "${E2E_PLAYGROUND_DIR}" && patrol "$@" --target "${E2E_JOURNEY_TARGET}" \
-    --dart-define-from-file="${defines_file}" --no-label \
-    ${E2E_EXPERIMENT_ANON:+--dart-define=E2E_EXPERIMENT_ANON=true})
+    --dart-define-from-file="${defines_file}" --no-label)
 }
 
 android_device_log() { adb logcat -d -v threadtime; }
