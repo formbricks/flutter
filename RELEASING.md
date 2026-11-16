@@ -5,7 +5,8 @@ by the [Release workflow](.github/workflows/release.yml). You publish a GitHub
 release; the workflow does the rest.
 
 The steps shared by all Formbricks SDKs, including the manual QA run before a
-release, are in the SDK QA & Release doc: <!-- NOTION_SDK_QA_RELEASE_URL -->
+release, are in the
+[SDK QA & Release doc](https://app.notion.com/p/419e5de84a5881cd8091c30193db8607).
 
 ## Release a version
 
@@ -16,7 +17,8 @@ release, are in the SDK QA & Release doc: <!-- NOTION_SDK_QA_RELEASE_URL -->
      example `1.4.0`, or `1.4.0-rc.1` for a prerelease.
    - **Notes:** select **Generate release notes**, then edit them. They become
      the changelog entry on pub.dev, so edit them before you publish.
-   - Tick **Set as a pre-release** for a version with a `-` suffix.
+   - Tick **Set as a pre-release** for a version with a `-` suffix, and only
+     then. The workflow fails when the box disagrees with the tag.
 3. Publish the release. GitHub creates the tag, and the tag push starts the
    Release workflow.
 4. Check that the workflow's `Verify on pub.dev` job passed.
@@ -27,25 +29,31 @@ into its own checkout only.
 
 ## What the workflow does
 
-The workflow runs build, publish, then verify. It does not re-run CI.
+The workflow runs build, publish, then verify. It does not re-run CI. Every
+job checks out the tag, so the scripts come from the tag, not from `main`.
 
-1. Checks that the tag is a semver version and writes it into the pubspec.
-2. Asks the pub.dev API whether the version exists. If it does, it skips to
-   verify, so **Re-run failed jobs** is always safe.
-3. Adds the GitHub release notes to `CHANGELOG.md` as the newest entry, so the
-   changelog tab on pub.dev shows them. The file in the repository is not
-   changed: it keeps the entries up to 1.3.1 and links to GitHub Releases.
-4. Builds and validates the package with `pub publish --dry-run`, then
-   publishes it with `pub publish --force`.
-5. The `verify` job polls the pub.dev API until it serves the version, and
-   fails after 15 minutes.
+1. `build` checks that the tag is a semver version, writes it into the
+   pubspec, and checks that the GitHub release's **Set as a pre-release** box
+   matches the tag. It fails when the tag has no GitHub release.
+2. `build` asks the pub.dev API whether the version exists. If it does, the
+   workflow skips to verify, so **Re-run failed jobs** is always safe.
+3. `build` adds the GitHub release notes to `CHANGELOG.md` as the newest
+   entry, so the changelog tab on pub.dev shows them. The file in the
+   repository is not changed: it keeps the entries up to 1.3.1 and links to
+   GitHub Releases.
+4. `build` runs `flutter analyze` and `pub publish --dry-run`, then hands the
+   versioned pubspec and changelog to `publish`.
+5. `publish`, the only job that can get a pub.dev OIDC token, publishes those
+   files with `pub publish --force`.
+6. `verify` polls the pub.dev API until it serves the version, and fails
+   after 15 minutes.
 
 pub.dev treats a version with a `-` suffix as a prerelease by itself. Pub
 prefers stable versions, so users get a prerelease when they ask for it, for
 example with `formbricks: ^1.4.0-rc.1`.
 
 The release scripts and their tests live in [`tool/release/`](tool/release).
-Run a script's tests with `bash tool/release/<script>_test.sh`.
+`make script-tests` runs their tests (CI runs it in `unit-tests`).
 
 ## Why Flutter triggers on a tag push
 
@@ -60,14 +68,15 @@ repos.
 Two consequences:
 
 - Create tags only by publishing a GitHub release. A tag pushed with `git`
-  publishes too, but before a release exists, so `CHANGELOG.md` on pub.dev
-  links to the release page instead of carrying its notes.
+  has no release yet, so the workflow fails in `build` without publishing.
 - A tag created by a workflow using `GITHUB_TOKEN` does not start other
   workflows, so a release cannot be automated that way.
 
 ## Fixing a failed release
 
-- **Failed before or during the publish step:** if the cause was transient,
+- **Failed on the pre-release check:** edit the GitHub release so **Set as a
+  pre-release** matches the tag, then re-run the failed jobs.
+- **Failed in `build` or `publish`:** if the cause was transient,
   re-run the failed jobs. A re-run uses the code at the tag, so if that code
   is broken, fix it on `main` and release a new version.
 - **Failed in `verify`:** pub.dev may be slow. Re-run the failed job.
