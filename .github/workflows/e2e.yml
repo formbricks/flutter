@@ -11,9 +11,6 @@ name: E2E
 #   artifacts: the tunnel URL one way, the journey's result the other. A job's outputs only publish
 #   when it ends, which is why the hand-off uses artifacts.
 on:
-  push:
-    branches:
-      - dhruwang/eng-7219-flutter-patrol-golden-journey-android-ios
   workflow_call:
     inputs:
       server_version:
