@@ -42,8 +42,9 @@ details.
 `patrol_test/golden_journey_test.dart` is the SDK golden journey that every
 Formbricks SDK runs in CI: set up, `setUserId`, `setAttribute(plan, pro)`,
 `track('qa-action')`, then answer the survey (NPS 9, feedback, Finish, close).
-Patrol drives the Flutter widgets and, through UiAutomator / XCUITest, the
-survey inside the SDK's native WebView. `.github/workflows/e2e.yml` runs it on
+Patrol drives the Flutter widgets and checks, through UiAutomator / XCUITest,
+what the survey in the SDK's native WebView shows; the answers go in through the
+survey page's DOM (see the test's header for why native taps can't). `.github/workflows/e2e.yml` runs it on
 an Android emulator and an iOS simulator against a seeded server
 (`e2e/server`); see `e2e/flutter/run-journey.sh` for the commands.
 

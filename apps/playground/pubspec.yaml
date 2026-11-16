@@ -48,6 +48,8 @@ dev_dependencies:
   # Drives the golden journey (patrol_test/), including taps inside the
   # survey's native WebView. Run it with patrol_cli, not `flutter test`.
   patrol: ^4.11.0
+  # The journey answers the survey through the SDK's WebView (its DOM).
+  webview_flutter: ^4.14.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
