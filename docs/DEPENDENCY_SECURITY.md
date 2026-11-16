@@ -91,8 +91,9 @@ resolved only by upgrading the Android Gradle Plugin.
 ## Handling findings
 
 Findings appear as Dependabot alerts (Security tab) for the default branch, and
-as a failing `dependency-review` job in CI when a pull request introduces a
-High/Critical vulnerability in Pub packages.
+as a failing `dependency-review` job in CI when a pull request or merge group
+introduces a known vulnerability in Pub packages (the action's default
+policy).
 
 For each High/Critical alert, a person decides:
 
