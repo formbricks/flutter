@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Patrol (patrol_test/): generated test bundle and local run outputs.
+/patrol_test/test_bundle.dart
+/patrol_test/videos/
+/patrol_test/screenshots/
+.patrol.env

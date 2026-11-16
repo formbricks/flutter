@@ -1,10 +1,11 @@
-/// E2E QA for ENG-1128 survey eligibility filtering, against a real local
-/// Formbricks backend and the real survey runtime in a WebView.
+/// Manual QA for ENG-1128 survey eligibility filtering, against a real local
+/// Formbricks backend and the real survey runtime in a WebView. Skipped unless
+/// SURVEY_ID is passed, so CI's golden journey run never picks it up.
 ///
-/// Run (simulator booted, backend on localhost:3000):
+/// Run from apps/playground (simulator booted, backend on localhost:3000):
 /// ```sh
-/// fvm flutter test integration_test/survey_filtering_qa_test.dart \
-///   -d UDID \
+/// patrol test --target patrol_test/survey_filtering_qa_test.dart \
+///   --device UDID \
 ///   --dart-define=APP_URL=http://localhost:3000 \
 ///   --dart-define=WORKSPACE_ID=WSP_ID \
 ///   --dart-define=SURVEY_ID=SURVEY_ID \
@@ -21,7 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:formbricks/formbricks.dart';
 import 'package:formbricks_playground/main.dart';
-import 'package:integration_test/integration_test.dart';
+import 'package:patrol/patrol.dart';
 
 const String _surveyId = String.fromEnvironment('SURVEY_ID');
 const String _scenario = String.fromEnvironment(
@@ -109,10 +110,10 @@ Future<Map<String, dynamic>> _waitForDisplays(WidgetTester tester, int count) =>
     );
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  testWidgets('scenario: $_scenario', (tester) async {
-    expect(_surveyId, isNotEmpty, reason: 'pass --dart-define=SURVEY_ID=...');
+  patrolTest('survey filtering scenario: $_scenario', skip: _surveyId.isEmpty, (
+    $,
+  ) async {
+    final tester = $.tester;
 
     await Formbricks.debugClearStoredConfig();
     await _pumpApp(tester);
