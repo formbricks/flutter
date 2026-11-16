@@ -57,6 +57,3 @@ E2E_USER_ID=me E2E_FEEDBACK=hello e2e/flutter/run-journey.sh ios-build
 E2E_USER_ID=me E2E_FEEDBACK=hello E2E_APP_URL=http://localhost:3000 \
   e2e/flutter/run-journey.sh ios
 ```
-
-`patrol_test/survey_filtering_qa_test.dart` holds the manual survey-filtering
-QA scenarios; it runs only when you pass `SURVEY_ID` (see its header).
