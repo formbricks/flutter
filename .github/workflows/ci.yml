@@ -185,6 +185,12 @@ jobs:
       - name: Run playground app tests
         run: make test-playground
 
+      # The release, PR Check Summary and E2E harness scripts. They don't
+      # depend on the Flutter SDK, so one leg runs them.
+      - name: Run the script tests
+        if: matrix.sdk == 'pinned'
+        run: make script-tests
+
       - name: Upload coverage for Sonar
         if: matrix.sdk == 'pinned'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -352,17 +358,10 @@ jobs:
           version: 1.32.0
           advanced-security: false
 
+      # The summary, release and E2E harness scripts; their tests run in
+      # unit-tests.
       - name: Shellcheck the repo's shell scripts
-        run: shellcheck .github/scripts/*.sh tool/*.sh tool/release/*.sh
-
-      # The PR Check Summary decision and the release helpers.
-      - name: Test the shell scripts
-        run: |
-          for t in .github/scripts/*_test.sh tool/release/*_test.sh; do
-            echo "::group::$t"
-            bash "$t"
-            echo "::endgroup::"
-          done
+        run: make shellcheck
 
   e2e-tests:
     name: e2e-tests
