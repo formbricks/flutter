@@ -42,7 +42,7 @@ help:
 	@printf "  format          Format Dart code\n"
 	@printf "  format-check    Check Dart formatting\n"
 	@printf "  test            Run tests in packages that have test/\n"
-	@printf "  test-sdk-machine Run SDK tests and write machine JSON output\n"
+	@printf "  test-sdk-machine Run SDK tests with coverage and write machine JSON output\n"
 	@printf "  test-playground Run playground tests\n"
 	@printf "  coverage        Run tests with coverage\n"
 	@printf "  test-sdk-coverage Run SDK tests with coverage\n"
@@ -103,7 +103,7 @@ test:
 
 test-sdk-machine:
 	mkdir -p $(TEST_RESULTS_DIR)
-	cd $(SDK_DIR) && $(FLUTTER) test --machine > ../../$(TEST_RESULTS_DIR)/formbricks.json
+	cd $(SDK_DIR) && $(FLUTTER) test --coverage --machine > ../../$(TEST_RESULTS_DIR)/formbricks.json
 
 test-playground:
 	cd $(PLAYGROUND_DIR) && $(FLUTTER) test
