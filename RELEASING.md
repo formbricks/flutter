@@ -36,12 +36,13 @@ job checks out the tag, so the scripts come from the tag, not from `main`.
    pubspec, and checks that the GitHub release's **Set as a pre-release** box
    matches the tag. It fails when the tag has no GitHub release.
 2. `build` asks the pub.dev API whether the version exists. If it does, the
-   workflow skips to verify, so **Re-run failed jobs** is always safe.
+   workflow skips to verify. `publish` asks again before it publishes, so
+   **Re-run failed jobs** is always safe.
 3. `build` adds the GitHub release notes to `CHANGELOG.md` as the newest
    entry, so the changelog tab on pub.dev shows them. The file in the
    repository is not changed: it keeps the entries up to 1.3.1 and links to
    GitHub Releases.
-4. `build` runs `flutter analyze` and `pub publish --dry-run`, then hands the
+4. `build` runs `pub publish --dry-run`, then hands the
    versioned pubspec and changelog to `publish`.
 5. `publish`, the only job that can get a pub.dev OIDC token, publishes those
    files with `pub publish --force`.
@@ -69,6 +70,8 @@ Two consequences:
 
 - Create tags only by publishing a GitHub release. A tag pushed with `git`
   has no release yet, so the workflow fails in `build` without publishing.
+  To recover, publish a GitHub release for that existing tag, then re-run the
+  failed jobs.
 - A tag created by a workflow using `GITHUB_TOKEN` does not start other
   workflows, so a release cannot be automated that way.
 

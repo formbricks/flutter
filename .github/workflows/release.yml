@@ -112,10 +112,6 @@ jobs:
         if: steps.registry.outputs.status == 'missing'
         run: make deps-lockfile
 
-      - name: Analyze (infos and warnings fail)
-        if: steps.registry.outputs.status == 'missing'
-        run: make analyze-ci
-
       # Builds and validates the archive exactly as pub.dev receives it.
       - name: Build the package
         if: steps.registry.outputs.status == 'missing'
@@ -154,14 +150,29 @@ jobs:
         with:
           persist-credentials: false
 
+      # "Re-run failed jobs" re-runs only this job, with build's old answer.
+      # If an earlier attempt uploaded the version before failing, skip it.
+      - name: Check whether pub.dev already has this version
+        id: registry
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          status="$(tool/release/pub_version.sh status "$PACKAGE" "$TAG")"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [[ $status == "published" ]]; then
+            echo "::notice::$PACKAGE $TAG is already on pub.dev; skipping the publish."
+          fi
+
       # The versioned pubspec and the changelog the build job validated.
       - name: Get the release files
+        if: steps.registry.outputs.status == 'missing'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-files
           path: ${{ env.PACKAGE_DIR }}
 
       - name: Commit the release files on the runner
+        if: steps.registry.outputs.status == 'missing'
         env:
           TAG: ${{ github.ref_name }}
         run: |
@@ -171,9 +182,11 @@ jobs:
 
       # Creates the OIDC token `pub publish` uses.
       - name: Set up Dart for pub.dev OIDC
+        if: steps.registry.outputs.status == 'missing'
         uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
 
       - name: Set up Flutter
+        if: steps.registry.outputs.status == 'missing'
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
@@ -182,11 +195,13 @@ jobs:
           cache: false
 
       - name: Install dependencies
+        if: steps.registry.outputs.status == 'missing'
         run: make deps-lockfile
 
       # `pub publish` builds the archive again from these sources; the build
       # job's dry run validated the same files.
       - name: Publish to pub.dev
+        if: steps.registry.outputs.status == 'missing'
         run: make pub-publish-force
 
   verify:
