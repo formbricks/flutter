@@ -11,23 +11,21 @@ Map<String, dynamic> _survey(
   int? displayLimit,
   int? recontactDays,
   Map<String, dynamic>? segment,
-}) =>
-    {
-      'id': id,
-      if (displayOption != null) 'displayOption': displayOption,
-      if (displayLimit != null) 'displayLimit': displayLimit,
-      if (recontactDays != null) 'recontactDays': recontactDays,
-      if (segment != null) 'segment': segment,
-    };
+}) => {
+  'id': id,
+  'displayOption': ?displayOption,
+  'displayLimit': ?displayLimit,
+  'recontactDays': ?recontactDays,
+  'segment': ?segment,
+};
 
 TWorkspaceState _workspace(
   List<Object?> surveys, {
   Map<String, dynamic> settings = const {},
-}) =>
-    TWorkspaceState(
-      expiresAt: DateTime(2100),
-      data: TWorkspaceData(surveys: surveys, settings: settings),
-    );
+}) => TWorkspaceState(
+  expiresAt: DateTime(2100),
+  data: TWorkspaceData(surveys: surveys, settings: settings),
+);
 
 TUserState _user({
   String? userId,
@@ -35,17 +33,16 @@ TUserState _user({
   List<TDisplay> displays = const [],
   List<String> responses = const [],
   DateTime? lastDisplayAt,
-}) =>
-    TUserState(
-      expiresAt: null,
-      data: TUserData(
-        userId: userId,
-        segments: segments,
-        displays: displays,
-        responses: responses,
-        lastDisplayAt: lastDisplayAt,
-      ),
-    );
+}) => TUserState(
+  expiresAt: null,
+  data: TUserData(
+    userId: userId,
+    segments: segments,
+    displays: displays,
+    responses: responses,
+    lastDisplayAt: lastDisplayAt,
+  ),
+);
 
 List<String> _ids(List<TSurvey> surveys) => surveys.map((s) => s.id).toList();
 
@@ -177,16 +174,15 @@ void main() {
         ),
         isEmpty,
       );
-      expect(
-        _ids(filterSurveys(workspace, _user(), now: fixedNow)),
-        ['s1'],
-      );
+      expect(_ids(filterSurveys(workspace, _user(), now: fixedNow)), ['s1']);
     });
 
     test('displayOnce ignores displays of other surveys', () {
       final result = filterSurveys(
         _workspace([_survey('s1', displayOption: 'displayOnce')]),
-        _user(displays: [TDisplay(surveyId: 'other', createdAt: now)]),
+        _user(
+          displays: [TDisplay(surveyId: 'other', createdAt: now)],
+        ),
         now: fixedNow,
       );
       expect(_ids(result), ['s1']);
@@ -255,10 +251,7 @@ void main() {
 
     test('an unknown displayOption excludes the survey without throwing', () {
       final result = filterSurveys(
-        _workspace([
-          _survey('bad', displayOption: 'weird'),
-          _survey('good'),
-        ]),
+        _workspace([_survey('bad', displayOption: 'weird'), _survey('good')]),
         _user(),
         now: fixedNow,
       );
@@ -267,10 +260,7 @@ void main() {
 
     test('a missing displayOption excludes the survey without throwing', () {
       final result = filterSurveys(
-        _workspace([
-          _survey('bad', displayOption: null),
-          _survey('good'),
-        ]),
+        _workspace([_survey('bad', displayOption: null), _survey('good')]),
         _user(),
         now: fixedNow,
       );

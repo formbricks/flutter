@@ -14,28 +14,19 @@ void main() {
     });
     test('explicit default https port → true', () {
       expect(
-        isAllowedWebViewNavigation(
-          'https://app.formbricks.com:443/x',
-          appUrl,
-        ),
+        isAllowedWebViewNavigation('https://app.formbricks.com:443/x', appUrl),
         isTrue,
       );
     });
     test('explicit default http port → true', () {
       expect(
-        isAllowedWebViewNavigation(
-          'http://localhost:80/x',
-          'http://localhost',
-        ),
+        isAllowedWebViewNavigation('http://localhost:80/x', 'http://localhost'),
         isTrue,
       );
     });
     test('non-default port → false', () {
       expect(
-        isAllowedWebViewNavigation(
-          'https://app.formbricks.com:8443/x',
-          appUrl,
-        ),
+        isAllowedWebViewNavigation('https://app.formbricks.com:8443/x', appUrl),
         isFalse,
       );
     });

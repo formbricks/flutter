@@ -49,8 +49,9 @@ void main() {
     });
 
     test('a multi-flag payload fires multiple events in declaration order', () {
-      final events =
-          parseWebViewEvents('{"onResponseCreated":true,"onClose":true}');
+      final events = parseWebViewEvents(
+        '{"onResponseCreated":true,"onClose":true}',
+      );
       expect(events.length, 2);
       expect(events[0], isA<ResponseCreatedEvent>());
       expect(events[1], isA<CloseEvent>());
@@ -78,10 +79,7 @@ void main() {
     });
 
     test('onFinished maps to a FinishedEvent', () {
-      expect(
-        parseWebViewEvents('{"onFinished":true}'),
-        [isA<FinishedEvent>()],
-      );
+      expect(parseWebViewEvents('{"onFinished":true}'), [isA<FinishedEvent>()]);
     });
 
     test('finished is emitted after response, in handler order', () {
@@ -89,11 +87,7 @@ void main() {
         parseWebViewEvents(
           '{"onResponseCreated":true,"onFinished":true,"onClose":true}',
         ),
-        [
-          isA<ResponseCreatedEvent>(),
-          isA<FinishedEvent>(),
-          isA<CloseEvent>(),
-        ],
+        [isA<ResponseCreatedEvent>(), isA<FinishedEvent>(), isA<CloseEvent>()],
       );
     });
 
@@ -115,13 +109,16 @@ void main() {
       expect(rect.height, 120);
     });
 
-    test('geometry with null data → GeometryEvent(null) (card not laid out)',
-        () {
-      final event =
-          parseWebViewEvents('{"type":"Geometry","data":null}').single;
-      expect(event, isA<GeometryEvent>());
-      expect((event as GeometryEvent).rect, isNull);
-    });
+    test(
+      'geometry with null data → GeometryEvent(null) (card not laid out)',
+      () {
+        final event = parseWebViewEvents(
+          '{"type":"Geometry","data":null}',
+        ).single;
+        expect(event, isA<GeometryEvent>());
+        expect((event as GeometryEvent).rect, isNull);
+      },
+    );
 
     test('geometry missing data → GeometryEvent(null)', () {
       final event = parseWebViewEvents('{"type":"Geometry"}').single;

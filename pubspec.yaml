@@ -6,10 +6,9 @@ publish_to: none
 # (Melos 8) that ties the SDK package and demo app together under a single
 # resolved dependency graph + lockfile.
 #
-# Working in this repo needs Dart 3.12+ (the `sdk` constraint below). That is
-# stricter than what the pieces themselves require — pub workspaces need
-# Dart 3.6+ and Melos 8.6.0 needs Dart 3.9+ — and stricter than the published
-# `formbricks` package, which keeps a Dart 3.6 / Flutter 3.27 floor.
+# Working in this repo needs Dart 3.12+ (the `sdk` constraint below), the same
+# floor as the published `formbricks` package (Dart 3.12 / Flutter 3.44, set by
+# its webview_flutter_android dependency).
 environment:
   sdk: ^3.12.0
 

@@ -3,6 +3,9 @@
 SDK_DIR := packages/formbricks
 PLAYGROUND_DIR := apps/playground
 TEST_RESULTS_DIR := test-results
+# dart format takes each package's language version from this file; without it
+# (or when it is stale) it formats with the SDK's newest style instead.
+PACKAGE_CONFIG := .dart_tool/package_config.json
 PLATFORMS := ios android
 PLATFORM_GOAL := $(firstword $(filter $(PLATFORMS),$(MAKECMDGOALS)))
 PLATFORM ?=
@@ -19,7 +22,13 @@ endif
 
 MELOS := $(DART) run melos
 
+# The repo's own shell scripts (release, PR Check Summary, E2E harness) and
+# their tests.
+SHELL_SCRIPTS = $(shell find .github/scripts tool e2e -name '*.sh' -not -path '*/.state/*' | sort)
+SCRIPT_TESTS = $(sort $(wildcard .github/scripts/*_test.sh tool/release/*_test.sh e2e/*/test/*.sh))
+
 .PHONY: help deps deps-lockfile get doctor analyze analyze-ci lint format format-docs format-docs-check format-check check
+.PHONY: shellcheck script-tests
 .PHONY: test test-sdk-machine test-playground coverage test-coverage test-sdk-coverage
 .PHONY: build build-all build-android build-ios build-ios-no-codesign run run-ios run-android devices emulators
 .PHONY: pana-install pana pub-publish-dry-run pub-publish-force
@@ -39,11 +48,13 @@ help:
 	@printf "  format          Format Dart code\n"
 	@printf "  format-check    Check Dart formatting\n"
 	@printf "  test            Run tests in packages that have test/\n"
-	@printf "  test-sdk-machine Run SDK tests and write machine JSON output\n"
+	@printf "  test-sdk-machine Run SDK tests with coverage and write machine JSON output\n"
 	@printf "  test-playground Run playground tests\n"
 	@printf "  coverage        Run tests with coverage\n"
 	@printf "  test-sdk-coverage Run SDK tests with coverage\n"
-	@printf "  check           Run format-check, analyze, and test\n\n"
+	@printf "  check           Run format-check, analyze, and test\n"
+	@printf "  shellcheck      Shellcheck the repo's shell scripts\n"
+	@printf "  script-tests    Run the release, summary and E2E harness script tests\n\n"
 	@printf "Playground targets:\n"
 	@printf "  build           Build Android debug APK\n"
 	@printf "  build android   Build Android debug APK\n"
@@ -76,7 +87,10 @@ analyze lint:
 analyze-ci:
 	$(FLUTTER) analyze --fatal-infos --fatal-warnings
 
-format:
+$(PACKAGE_CONFIG): pubspec.yaml pubspec.lock $(SDK_DIR)/pubspec.yaml $(PLAYGROUND_DIR)/pubspec.yaml
+	$(FLUTTER) pub get --enforce-lockfile
+
+format: $(PACKAGE_CONFIG)
 	$(DART) format .
 	$(MAKE) --no-print-directory format-docs
 
@@ -86,18 +100,24 @@ format-docs:
 format-docs-check:
 	npx -y prettier@3.6.2 --check "**/*.md"
 
-format-check:
+format-check: $(PACKAGE_CONFIG)
 	$(DART) format --output=none --set-exit-if-changed .
 	$(MAKE) --no-print-directory format-docs-check
 
 check: format-check analyze test
+
+shellcheck:
+	shellcheck -x $(SHELL_SCRIPTS)
+
+script-tests:
+	@set -e; for t in $(SCRIPT_TESTS); do echo "== $$t"; bash "$$t"; done
 
 test:
 	$(MELOS) exec --concurrency 1 --dir-exists=test -- "$(FLUTTER) test"
 
 test-sdk-machine:
 	mkdir -p $(TEST_RESULTS_DIR)
-	cd $(SDK_DIR) && $(FLUTTER) test --machine > ../../$(TEST_RESULTS_DIR)/formbricks.json
+	cd $(SDK_DIR) && $(FLUTTER) test --coverage --machine > ../../$(TEST_RESULTS_DIR)/formbricks.json
 
 test-playground:
 	cd $(PLAYGROUND_DIR) && $(FLUTTER) test
@@ -141,7 +161,7 @@ pana-install:
 	$(DART) pub global activate pana
 
 pana:
-	$(DART) pub global run pana --no-warning --exit-code-threshold 30 $(SDK_DIR)
+	$(DART) pub global run pana --no-warning --exit-code-threshold 0 $(SDK_DIR)
 
 pub-publish-dry-run:
 	cd $(SDK_DIR) && $(FLUTTER) pub publish --dry-run

@@ -73,8 +73,9 @@ then runs `apps/playground`. Once the app is running, press `r` for hot reload,
 `R` for hot restart, and `q` to quit.
 
 You should see a **"Welcome to Formbricks"** header, a connection form
-(App URL + Workspace ID), a "Trigger Code Action" button, the identity buttons
-(setUserId / setAttributes / setAttribute / setLanguage / logout), and
+(App URL + Workspace ID), User ID and attribute fields with the identity buttons
+(setUserId / setAttributes / setAttribute / setLanguage / logout), a "Trigger
+Code Action" button, and
 local-storage inspect/clear buttons. Connect to a real workspace to exercise
 them end to end.
 
@@ -118,9 +119,8 @@ A standard `packages/*` + `apps/*` monorepo split.
 
 Uses **Dart pub workspaces** + **[Melos](https://melos.invertase.dev) 8**.
 Developing in this repo needs **Dart ≥ 3.12** (the root `pubspec.yaml`
-constraint). The published `formbricks` package keeps a lower floor of
-Dart ≥ 3.6 / Flutter ≥ 3.27 for consumers — workspaces need Dart ≥ 3.6 and
-Melos 8.6.0 needs Dart ≥ 3.9, so the repo constraint is the binding one.
+constraint). That is also the floor of the published `formbricks` package:
+Dart ≥ 3.12 / Flutter ≥ 3.44, set by its `webview_flutter_android` dependency.
 
 - The root `pubspec.yaml` declares `workspace:` members. Each member sets
   `resolution: workspace`, so the whole repo shares **one** lockfile and one
@@ -210,7 +210,8 @@ SDK version.
   and code completion use the pinned SDK.
 - Bump the repo's Flutter version with `fvm use <version> --force`, then commit
   the changed `.fvmrc`.
-- Floors: published SDK = Flutter ≥ 3.27 / Dart ≥ 3.6; dev tooling pins a newer SDK via `.fvmrc`.
+- Floors: published SDK = Flutter ≥ 3.44 / Dart ≥ 3.12 (CI runs the unit tests
+  on this floor and on the `.fvmrc` pin).
 
 ## Running the demo app
 

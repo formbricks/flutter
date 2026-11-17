@@ -96,8 +96,9 @@ class EmbeddedDataStore {
   /// Keys only, never values: the documented use of this bag includes hashed
   /// identity fields, and `Logger` is explicitly a no-PII channel.
   void _traceSet(List<String> setKeys, List<String> removedKeys) {
-    final removed =
-        removedKeys.isEmpty ? '' : ', removed [${removedKeys.join(', ')}]';
+    final removed = removedKeys.isEmpty
+        ? ''
+        : ', removed [${removedKeys.join(', ')}]';
     Logger.debug(
       'setEmbeddedData: set [${setKeys.join(', ')}]$removed — the bag now '
       'holds [${_data.keys.join(', ')}]. Keys land on a response only if the '
@@ -130,9 +131,9 @@ class EmbeddedDataStore {
   /// contract accepts for a `date` field. Everything else `jsonEncode` already
   /// handles.
   Map<String, Object> snapshot() => <String, Object>{
-        for (final entry in _data.entries)
-          entry.key: entry.value is DateTime
-              ? (entry.value as DateTime).toUtc().toIso8601String()
-              : entry.value,
-      };
+    for (final entry in _data.entries)
+      entry.key: entry.value is DateTime
+          ? (entry.value as DateTime).toUtc().toIso8601String()
+          : entry.value,
+  };
 }

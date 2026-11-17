@@ -48,8 +48,8 @@ proxy we have.
 | Flutter SDK, `pana`, `prettier`   | `.fvmrc`; `make pana-install`; `npx prettier@3.6.2` | Not scanned (CI-only, or pinned by hand)      |
 
 `apps/playground` is `publish_to: none`; it is not part of the pub.dev release.
-The release workflow formats, analyzes, tests and publishes the Dart package and
-does not run Gradle.
+The release workflow builds (`pub publish --dry-run`), publishes and verifies the
+Dart package; it does not re-run CI and does not run Gradle.
 
 ## How Android coverage works
 
@@ -91,8 +91,9 @@ resolved only by upgrading the Android Gradle Plugin.
 ## Handling findings
 
 Findings appear as Dependabot alerts (Security tab) for the default branch, and
-as a failing `Dependency Review` check when a pull request introduces a
-High/Critical vulnerability in Pub packages.
+as a failing `dependency-review` job in CI when a pull request or merge group
+introduces a known vulnerability in Pub packages (the action's default
+policy).
 
 For each High/Critical alert, a person decides:
 
@@ -126,7 +127,7 @@ release:
 
 ## Limitations
 
-- **Default-branch snapshots only.** `Dependency Review` sees Pub changes on pull
+- **Default-branch snapshots only.** `dependency-review` sees Pub changes on pull
   requests but not Gradle changes. Submitting snapshots for pull requests needs a
   privileged job that verifies the snapshot's commit and ref against the pull
   request, since a forged snapshot could overwrite the default-branch graph.
@@ -136,4 +137,6 @@ release:
   CocoaPod or Swift package, commit `Podfile.lock` or `Package.resolved` so the
   graph can see it.
 - **Not scanned:** the Flutter SDK, `pana`, `prettier` and its npm dependencies,
-  and CI runner images.
+  CI runner images, and the E2E and lint tools CI downloads by pinned version
+  (`patrol_cli`, `cloudflared`, `actionlint`, and the images in
+  `e2e/server/docker-compose.yml`).

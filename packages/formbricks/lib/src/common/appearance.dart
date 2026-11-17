@@ -80,8 +80,8 @@ String resolveAppearance(BuildContext context, FormbricksAppearance requested) {
       final brightness = context.findAncestorWidgetOfExactType<Theme>() != null
           ? Theme.of(context).brightness
           : CupertinoTheme.maybeBrightnessOf(context) ??
-              MediaQuery.maybePlatformBrightnessOf(context) ??
-              Brightness.light;
+                MediaQuery.maybePlatformBrightnessOf(context) ??
+                Brightness.light;
       return brightness == Brightness.dark ? 'dark' : 'light';
   }
 }
@@ -115,10 +115,7 @@ Map<String, Map<String, String>>? buildCustomCss(
   final workspaceScope = scope(workspace);
   final surveyScope = scope(survey);
   if (workspaceScope == null && surveyScope == null) return null;
-  return {
-    if (workspaceScope != null) 'workspace': workspaceScope,
-    if (surveyScope != null) 'survey': surveyScope,
-  };
+  return {'workspace': ?workspaceScope, 'survey': ?surveyScope};
 }
 
 /// Hands the open survey's resolved appearance to the WebView host.

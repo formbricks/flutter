@@ -10,7 +10,7 @@ library;
 
 /// A single Formbricks survey.
 class TSurvey {
-  /// Creates a survey from already-parsed fields plus the original [raw] map.
+  /// Creates a survey from already-parsed fields plus the original `raw` map.
   const TSurvey({
     required this.id,
     required this.triggers,
@@ -24,52 +24,52 @@ class TSurvey {
     this.displayPercentage,
     this.segment,
     this.interactionRefresh,
-    required Map<String, dynamic> raw,
-  }) : _raw = raw;
+    required this._raw,
+  });
 
   /// Builds a [TSurvey] from decoded JSON, retaining [json] for lossless
   /// re-serialization into the survey runtime.
   factory TSurvey.fromJson(Map<String, dynamic> json) => TSurvey(
-        id: json['id'] as String,
-        triggers: (json['triggers'] as List?)
-                ?.map(
-                  (e) => TSurveyTrigger.fromJson(
-                    (e as Map).cast<String, dynamic>(),
-                  ),
-                )
-                .toList() ??
-            const [],
-        languages: (json['languages'] as List?)
-                ?.map(
-                  (e) => TSurveyLanguage.fromJson(
-                    (e as Map).cast<String, dynamic>(),
-                  ),
-                )
-                .toList() ??
-            const [],
-        delay: (json['delay'] as num?)?.toInt() ?? 0,
-        styling: (json['styling'] as Map?)?.cast<String, dynamic>(),
-        projectOverwrites: json['projectOverwrites'] == null
-            ? null
-            : TProjectOverwrites.fromJson(
-                (json['projectOverwrites'] as Map).cast<String, dynamic>(),
-              ),
-        displayOption: json['displayOption'] as String?,
-        displayLimit: (json['displayLimit'] as num?)?.toInt(),
-        recontactDays: (json['recontactDays'] as num?)?.toInt(),
-        displayPercentage: json['displayPercentage'] as num?,
-        segment: json['segment'] == null
-            ? null
-            : TSurveySegment.fromJson(
-                (json['segment'] as Map).cast<String, dynamic>(),
-              ),
-        interactionRefresh: json['interactionRefresh'] is Map
-            ? TInteractionRefresh.fromJson(
-                (json['interactionRefresh'] as Map).cast<String, dynamic>(),
-              )
-            : null,
-        raw: json,
-      );
+    id: json['id'] as String,
+    triggers:
+        (json['triggers'] as List?)
+            ?.map(
+              (e) =>
+                  TSurveyTrigger.fromJson((e as Map).cast<String, dynamic>()),
+            )
+            .toList() ??
+        const [],
+    languages:
+        (json['languages'] as List?)
+            ?.map(
+              (e) =>
+                  TSurveyLanguage.fromJson((e as Map).cast<String, dynamic>()),
+            )
+            .toList() ??
+        const [],
+    delay: (json['delay'] as num?)?.toInt() ?? 0,
+    styling: (json['styling'] as Map?)?.cast<String, dynamic>(),
+    projectOverwrites: json['projectOverwrites'] == null
+        ? null
+        : TProjectOverwrites.fromJson(
+            (json['projectOverwrites'] as Map).cast<String, dynamic>(),
+          ),
+    displayOption: json['displayOption'] as String?,
+    displayLimit: (json['displayLimit'] as num?)?.toInt(),
+    recontactDays: (json['recontactDays'] as num?)?.toInt(),
+    displayPercentage: json['displayPercentage'] as num?,
+    segment: json['segment'] == null
+        ? null
+        : TSurveySegment.fromJson(
+            (json['segment'] as Map).cast<String, dynamic>(),
+          ),
+    interactionRefresh: json['interactionRefresh'] is Map
+        ? TInteractionRefresh.fromJson(
+            (json['interactionRefresh'] as Map).cast<String, dynamic>(),
+          )
+        : null,
+    raw: json,
+  );
 
   /// The survey id.
   final String id;
@@ -177,10 +177,10 @@ class TInteractionRefresh {
 
   /// Whether an interaction of this kind should trigger a user-state refresh.
   bool shouldRefresh(InteractionSource source) => switch (source) {
-        InteractionSource.onDisplay => onDisplay,
-        InteractionSource.onResponse => onResponse,
-        InteractionSource.onFinished => onFinished,
-      };
+    InteractionSource.onDisplay => onDisplay,
+    InteractionSource.onResponse => onResponse,
+    InteractionSource.onFinished => onFinished,
+  };
 }
 
 /// The minimal segment shape read for targeting: `{ id, hasFilters }`.
@@ -215,10 +215,10 @@ class TSurveyTrigger {
 
   /// Builds a trigger from decoded JSON.
   factory TSurveyTrigger.fromJson(Map<String, dynamic> json) => TSurveyTrigger(
-        actionClass: TTriggerActionClass.fromJson(
-          (json['actionClass'] as Map).cast<String, dynamic>(),
-        ),
-      );
+    actionClass: TTriggerActionClass.fromJson(
+      (json['actionClass'] as Map).cast<String, dynamic>(),
+    ),
+  );
 
   /// The action class this trigger fires on.
   final TTriggerActionClass actionClass;
@@ -272,10 +272,8 @@ class TLanguage {
   const TLanguage({required this.code, this.alias});
 
   /// Builds it from decoded JSON.
-  factory TLanguage.fromJson(Map<String, dynamic> json) => TLanguage(
-        code: json['code'] as String,
-        alias: json['alias'] as String?,
-      );
+  factory TLanguage.fromJson(Map<String, dynamic> json) =>
+      TLanguage(code: json['code'] as String, alias: json['alias'] as String?);
 
   /// The ISO language code.
   final String code;

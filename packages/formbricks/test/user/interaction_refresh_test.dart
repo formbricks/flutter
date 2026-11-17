@@ -8,15 +8,14 @@ import 'package:formbricks/src/user/update_queue.dart';
 TSurvey _survey({
   TInteractionRefresh? interactionRefresh,
   String id = 'survey-a',
-}) =>
-    TSurvey(
-      id: id,
-      triggers: const [],
-      languages: const [],
-      delay: 0,
-      interactionRefresh: interactionRefresh,
-      raw: {'id': id},
-    );
+}) => TSurvey(
+  id: id,
+  triggers: const [],
+  languages: const [],
+  delay: 0,
+  interactionRefresh: interactionRefresh,
+  raw: {'id': id},
+);
 
 void main() {
   group('refreshSegmentsAfterInteraction', () {
@@ -45,9 +44,7 @@ void main() {
     test('no-ops for an empty user id', () {
       refreshSegmentsAfterInteraction(
         '',
-        _survey(
-          interactionRefresh: const TInteractionRefresh(onDisplay: true),
-        ),
+        _survey(interactionRefresh: const TInteractionRefresh(onDisplay: true)),
         InteractionSource.onDisplay,
       );
 
@@ -77,9 +74,7 @@ void main() {
     test('no-ops when only a different source is flagged', () {
       refreshSegmentsAfterInteraction(
         'user-1',
-        _survey(
-          interactionRefresh: const TInteractionRefresh(onDisplay: true),
-        ),
+        _survey(interactionRefresh: const TInteractionRefresh(onDisplay: true)),
         InteractionSource.onResponse,
       );
 
@@ -90,15 +85,15 @@ void main() {
       for (final (source, gate) in [
         (
           InteractionSource.onDisplay,
-          const TInteractionRefresh(onDisplay: true)
+          const TInteractionRefresh(onDisplay: true),
         ),
         (
           InteractionSource.onResponse,
-          const TInteractionRefresh(onResponse: true)
+          const TInteractionRefresh(onResponse: true),
         ),
         (
           InteractionSource.onFinished,
-          const TInteractionRefresh(onFinished: true)
+          const TInteractionRefresh(onFinished: true),
         ),
       ]) {
         UpdateQueue.resetInstance();
@@ -114,28 +109,24 @@ void main() {
 
     /// The flush is fire-and-forget, so an error on the returned future would otherwise
     /// surface as an unhandled async error and, in a test zone, fail the test.
-    test('a failing flush does not escape as an unhandled async error',
-        () async {
+    test('a failing flush does not escape as an unhandled async error', () async {
       final failures = <Object>[];
 
-      await runZonedGuarded(
-        () async {
-          refreshSegmentsAfterInteraction(
-            'user-1',
-            _survey(
-              interactionRefresh: const TInteractionRefresh(onDisplay: true),
-            ),
-            InteractionSource.onDisplay,
-          );
+      await runZonedGuarded(() async {
+        refreshSegmentsAfterInteraction(
+          'user-1',
+          _survey(
+            interactionRefresh: const TInteractionRefresh(onDisplay: true),
+          ),
+          InteractionSource.onDisplay,
+        );
 
-          // Force the queued flush to fail: no appUrl/workspaceId is configured, so
-          // `_flush` throws once the debounce elapses.
-          await Future<void>.delayed(
-            UpdateQueue.debounceDelay + const Duration(milliseconds: 100),
-          );
-        },
-        (error, _) => failures.add(error),
-      );
+        // Force the queued flush to fail: no appUrl/workspaceId is configured, so
+        // `_flush` throws once the debounce elapses.
+        await Future<void>.delayed(
+          UpdateQueue.debounceDelay + const Duration(milliseconds: 100),
+        );
+      }, (error, _) => failures.add(error));
 
       expect(failures, isEmpty);
     });
@@ -241,8 +232,10 @@ void main() {
 
     test('a non-object value is ignored rather than throwing', () {
       expect(
-        TSurvey.fromJson(const {'id': 'a', 'interactionRefresh': 'nope'})
-            .interactionRefresh,
+        TSurvey.fromJson(const {
+          'id': 'a',
+          'interactionRefresh': 'nope',
+        }).interactionRefresh,
         isNull,
       );
     });

@@ -8,11 +8,7 @@ TSurvey _survey(
   List<Map<String, dynamic>> languages, {
   Map<String, dynamic>? styling,
 }) =>
-    TSurvey.fromJson({
-      'id': 's',
-      'languages': languages,
-      if (styling != null) 'styling': styling,
-    });
+    TSurvey.fromJson({'id': 's', 'languages': languages, 'styling': ?styling});
 
 /// A deterministic RNG: every [nextDouble] returns [value].
 class _FixedRandom implements Random {

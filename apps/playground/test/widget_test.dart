@@ -82,4 +82,23 @@ void main() {
     expect(find.textContaining('not wired to the SDK yet'), findsNothing);
     expect(find.textContaining("track('code')"), findsWidgets);
   });
+
+  testWidgets('identity inputs are editable and default to plan = pro', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const PlaygroundApp());
+
+    // The golden journey (patrol_test/) types into these by key.
+    final userId = tester.widget<TextField>(find.byKey(kUserIdFieldKey));
+    final attributeKey = tester.widget<TextField>(
+      find.byKey(kAttributeKeyFieldKey),
+    );
+    final attributeValue = tester.widget<TextField>(
+      find.byKey(kAttributeValueFieldKey),
+    );
+    expect(userId.controller!.text, 'playground-user');
+    expect(attributeKey.controller!.text, 'plan');
+    expect(attributeValue.controller!.text, 'pro');
+    expect(find.text('Set User Attribute (single)'), findsOneWidget);
+  });
 }

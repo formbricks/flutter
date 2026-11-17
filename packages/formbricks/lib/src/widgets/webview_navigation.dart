@@ -71,10 +71,7 @@ NavAction decideNavigation(
 
 /// Opens [candidateUrl] in the external browser, enforcing the scheme
 /// allow-list (`http`/`https` only).
-Future<void> openExternalUrl(
-  String candidateUrl, {
-  LaunchUrlFn? launch,
-}) async {
+Future<void> openExternalUrl(String candidateUrl, {LaunchUrlFn? launch}) async {
   final uri = Uri.tryParse(candidateUrl);
   if (uri == null) {
     Logger.error('Failed to open external URL: invalid URL');
@@ -95,5 +92,4 @@ Future<void> openExternalUrl(
 Future<bool> _defaultLaunch(
   Uri url, {
   LaunchMode mode = LaunchMode.platformDefault,
-}) =>
-    url_launcher.launchUrl(url, mode: mode);
+}) => url_launcher.launchUrl(url, mode: mode);

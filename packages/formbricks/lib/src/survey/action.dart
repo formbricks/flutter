@@ -30,8 +30,10 @@ Future<bool> _defaultIsConnected() async {
 void triggerSurvey(TSurvey survey, {SurveyStore? store, Random? random}) {
   final displayPercentage = survey.displayPercentage;
   if (displayPercentage != null && displayPercentage > 0) {
-    final shouldDisplay =
-        shouldDisplayBasedOnPercentage(displayPercentage, random: random);
+    final shouldDisplay = shouldDisplayBasedOnPercentage(
+      displayPercentage,
+      random: random,
+    );
     if (!shouldDisplay) {
       Logger.debug(
         'Survey display of "${survey.id}" skipped based on displayPercentage.',
@@ -91,7 +93,8 @@ Future<Result<void, FormbricksError>> track(
     if (!connected) {
       return Result.err(
         NetworkError(
-          message: 'No internet connection. Please check your connection and '
+          message:
+              'No internet connection. Please check your connection and '
               'try again.',
           status: 0,
           url: Uri.tryParse('${cfg.appUrl}/js/surveys.umd.cjs'),

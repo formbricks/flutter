@@ -65,14 +65,12 @@ void main() {
         await resolveIn(tester, FormbricksAppearance.light, wrap: dark),
         'light',
       );
-      expect(
-        await resolveIn(tester, FormbricksAppearance.dark),
-        'dark',
-      );
+      expect(await resolveIn(tester, FormbricksAppearance.dark), 'dark');
     });
 
-    testWidgets('system follows a dark app theme on a light phone',
-        (tester) async {
+    testWidgets('system follows a dark app theme on a light phone', (
+      tester,
+    ) async {
       Widget darkApp(Widget c) => MaterialApp(theme: ThemeData.dark(), home: c);
       expect(
         await resolveIn(
@@ -85,14 +83,15 @@ void main() {
       );
     });
 
-    testWidgets('system follows an app pinned to light on a dark phone',
-        (tester) async {
+    testWidgets('system follows an app pinned to light on a dark phone', (
+      tester,
+    ) async {
       Widget lightApp(Widget c) => MaterialApp(
-            theme: ThemeData.light(),
-            darkTheme: ThemeData.dark(),
-            themeMode: ThemeMode.light,
-            home: c,
-          );
+        theme: ThemeData.light(),
+        darkTheme: ThemeData.dark(),
+        themeMode: ThemeMode.light,
+        home: c,
+      );
       expect(
         await resolveIn(
           tester,
@@ -105,23 +104,24 @@ void main() {
     });
 
     testWidgets(
-        'system falls back to the platform brightness with no app theme',
-        (tester) async {
-      Widget bare(Widget c) => MediaQuery(
-            data: const MediaQueryData(platformBrightness: Brightness.dark),
-            child: c,
-          );
-      expect(
-        await resolveIn(tester, FormbricksAppearance.system, wrap: bare),
-        'dark',
-      );
-    });
+      'system falls back to the platform brightness with no app theme',
+      (tester) async {
+        Widget bare(Widget c) => MediaQuery(
+          data: const MediaQueryData(platformBrightness: Brightness.dark),
+          child: c,
+        );
+        expect(
+          await resolveIn(tester, FormbricksAppearance.system, wrap: bare),
+          'dark',
+        );
+      },
+    );
 
     testWidgets('system follows a Cupertino app theme', (tester) async {
       Widget cupertino(Widget c) => CupertinoApp(
-            theme: const CupertinoThemeData(brightness: Brightness.dark),
-            home: c,
-          );
+        theme: const CupertinoThemeData(brightness: Brightness.dark),
+        home: c,
+      );
       expect(
         await resolveIn(tester, FormbricksAppearance.system, wrap: cupertino),
         'dark',
