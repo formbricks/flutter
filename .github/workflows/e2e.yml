@@ -9,7 +9,9 @@ name: E2E
 # - `server` + `ios`: GitHub's macOS runners cannot run Docker, so the Linux job opens a Cloudflare
 #   quick tunnel to its server (e2e/tunnel) and the two jobs, side by side with no `needs` between
 #   them, swap run artifacts: the tunnel URL one way, the journey's result the other. A job's
-#   outputs only publish when it ends, which is why the hand-off uses artifacts.
+#   outputs only publish when it ends, which is why the hand-off uses artifacts. The iOS job also
+#   waits for the server job's verdict, so either side failing fails both and "Re-run failed jobs"
+#   always re-runs the pair (a lone re-run would wait for an artifact of the other attempt).
 # - `server-version` checks the image tag once, before the other three start.
 on:
   workflow_call:
@@ -31,7 +33,6 @@ on:
 
 permissions:
   contents: read
-  actions: read # the iOS pair polls the run's artifacts for each other's hand-off
 
 env:
   # Unique per attempt; the retry inside the journey step reuses it, which the survey allows. Android
@@ -40,6 +41,7 @@ env:
   E2E_FEEDBACK: Golden journey feedback ${{ github.run_id }}
   SERVER_ARTIFACT: e2e-server-attempt-${{ github.run_attempt }}
   DONE_ARTIFACT: e2e-journey-done-attempt-${{ github.run_attempt }}
+  VERDICT_ARTIFACT: e2e-server-verdict-attempt-${{ github.run_attempt }}
   PATROL_CLI_VERSION: 4.9.0
   PATROL_ANALYTICS_ENABLED: "false"
 
@@ -170,6 +172,9 @@ jobs:
     name: Server and tunnel for iOS (Linux)
     needs: server-version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # polls the run's artifacts for the iOS job's hand-off
     timeout-minutes: 50
     env:
       FORMBRICKS_VERSION: ${{ needs.server-version.outputs.version }}
@@ -249,6 +254,23 @@ jobs:
       - name: Delete the seeded data through the V1 API
         run: e2e/server/cleanup.sh
 
+      # Always, so the iOS job fails too when this job failed after the journey.
+      - name: Tell the iOS job this job's result
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/verdict"
+          printf 'E2E_SERVER_RESULT=%s\n' "${RESULT}" > "$RUNNER_TEMP/verdict/server.env"
+
+      - name: Hand the result to the iOS job
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.VERDICT_ARTIFACT }}
+          path: ${{ runner.temp }}/verdict/server.env
+          retention-days: 1
+
       - name: Close the tunnel
         if: always()
         run: e2e/tunnel/stop.sh e2e/server/logs
@@ -272,6 +294,9 @@ jobs:
     # server that never starts.
     needs: server-version
     runs-on: macos-26
+    permissions:
+      contents: read
+      actions: read # polls the run's artifacts for the server job's hand-off
     timeout-minutes: 50
     env:
       XCODE_VERSION: "26.3"
@@ -348,3 +373,15 @@ jobs:
           path: e2e/flutter/reports
           if-no-files-found: ignore
           retention-days: 7
+
+      # The server job asserts the response after the journey; its failure must fail this job too,
+      # or "Re-run failed jobs" would re-run the server job alone.
+      - name: Wait for the server job's result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          e2e/tunnel/await-artifact.sh "${VERDICT_ARTIFACT}" "$RUNNER_TEMP/verdict" 600
+          if ! grep -qx 'E2E_SERVER_RESULT=success' "$RUNNER_TEMP/verdict/server.env"; then
+            echo "::error::the server job did not pass ($(cat "$RUNNER_TEMP/verdict/server.env")); see the Server and tunnel for iOS (Linux) job"
+            exit 1
+          fi
