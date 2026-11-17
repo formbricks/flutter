@@ -17,8 +17,12 @@ deadline=$((SECONDS + ${E2E_ASSERT_TIMEOUT_SECONDS:-60}))
 
 log "Waiting for a finished response from ${E2E_USER_ID} on survey ${SURVEY_ID}"
 while true; do
-  body="$(api_ok GET "/api/v1/management/responses?surveyId=${SURVEY_ID}&limit=50")"
-  if response="$(find_matching_response "${E2E_USER_ID}" "${E2E_ATTRIBUTE_VALUE}" "${nps}" "${E2E_FEEDBACK}" <<<"${body}" 2>"${reason_file}")"; then
+  # A transient error is retried until the deadline, like a missing response.
+  api GET "/api/v1/management/responses?surveyId=${SURVEY_ID}&limit=50"
+  body="${API_BODY}"
+  if [[ "${API_STATUS}" != 2?? ]]; then
+    echo "GET responses returned HTTP ${API_STATUS}: ${API_BODY}" >"${reason_file}"
+  elif response="$(find_matching_response "${E2E_USER_ID}" "${E2E_ATTRIBUTE_VALUE}" "${nps}" "${E2E_FEEDBACK}" <<<"${body}" 2>"${reason_file}")"; then
     log "Found it:"
     jq '{id, finished, contact, contactAttributes, data}' <<<"${response}"
     exit 0

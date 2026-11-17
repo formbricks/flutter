@@ -10,6 +10,12 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 mkdir -p "$(dirname "${E2E_STATE_FILE}")"
+# A re-run against the same server first deletes what the previous seed created: the action key
+# must be unique in the workspace.
+if [[ -s "${E2E_STATE_FILE}" ]]; then
+  log "Deleting the previous seed (${E2E_STATE_FILE})"
+  "${E2E_SERVER_DIR}/cleanup.sh"
+fi
 : >"${E2E_STATE_FILE}"
 save() {
   printf '%s=%q\n' "$1" "$2" >>"${E2E_STATE_FILE}"
@@ -23,7 +29,7 @@ save ACTION_CLASS_ID "$(jq -r '.id' <<<"${action_class}")"
 log "Creating the app survey"
 survey_id="$(api_ok POST /api/v1/management/surveys "$(build_survey_payload "${E2E_WORKSPACE_ID}" "${action_class}")" | jq -r '.data.id')"
 save SURVEY_ID "${survey_id}"
-authzed_expect drained outbox drain
+authzed_drain_outbox
 
 log "Targeting the survey to ${E2E_ATTRIBUTE_KEY} = ${E2E_ATTRIBUTE_VALUE}"
 updated="$(build_segment_filter_sql "${E2E_WORKSPACE_ID}" "${survey_id}" | psql_exec -f - 2>&1)"
