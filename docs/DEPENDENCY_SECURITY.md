@@ -48,8 +48,8 @@ proxy we have.
 | Flutter SDK, `pana`, `prettier`   | `.fvmrc`; `make pana-install`; `npx prettier@3.6.2` | Not scanned (CI-only, or pinned by hand)      |
 
 `apps/playground` is `publish_to: none`; it is not part of the pub.dev release.
-The release workflow formats, analyzes, tests and publishes the Dart package and
-does not run Gradle.
+The release workflow builds (`pub publish --dry-run`), publishes and verifies the
+Dart package; it does not re-run CI and does not run Gradle.
 
 ## How Android coverage works
 
@@ -137,4 +137,6 @@ release:
   CocoaPod or Swift package, commit `Podfile.lock` or `Package.resolved` so the
   graph can see it.
 - **Not scanned:** the Flutter SDK, `pana`, `prettier` and its npm dependencies,
-  and CI runner images.
+  CI runner images, and the E2E and lint tools CI downloads by pinned version
+  (`patrol_cli`, `cloudflared`, `actionlint`, and the images in
+  `e2e/server/docker-compose.yml`).

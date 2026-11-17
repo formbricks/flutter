@@ -73,8 +73,9 @@ then runs `apps/playground`. Once the app is running, press `r` for hot reload,
 `R` for hot restart, and `q` to quit.
 
 You should see a **"Welcome to Formbricks"** header, a connection form
-(App URL + Workspace ID), a "Trigger Code Action" button, the identity buttons
-(setUserId / setAttributes / setAttribute / setLanguage / logout), and
+(App URL + Workspace ID), User ID and attribute fields with the identity buttons
+(setUserId / setAttributes / setAttribute / setLanguage / logout), a "Trigger
+Code Action" button, and
 local-storage inspect/clear buttons. Connect to a real workspace to exercise
 them end to end.
 
