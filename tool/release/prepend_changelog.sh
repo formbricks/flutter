@@ -18,7 +18,8 @@ release_url="${4:?release url is required}"
 # nests under the "## <version>" heading. Lines inside fenced code are kept.
 demoted_notes() {
   awk '
-    function is_fence(line) { return line ~ /^[ ]{0,3}(```|~~~)/ }
+    # No {m,n} intervals: mawk (awk on Debian/Ubuntu) cannot compile them here.
+    function is_fence(line) { return line ~ /^(```|~~~| ```| ~~~|  ```|  ~~~|   ```|   ~~~)/ }
     function level(line) { match(line, /^#+/); return RLENGTH }
     NR == FNR {
       if (is_fence($0)) in_code = !in_code
