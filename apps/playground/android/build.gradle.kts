@@ -8,7 +8,7 @@ allprojects {
     // WebView with no children, so the golden journey cannot find its
     // content. 2.2.0 does not set the flag. leancodepl/patrol#3178.
     configurations.all {
-        resolutionStrategy.force("androidx.test.uiautomator:uiautomator:2.2.0")
+        resolutionStrategy.force("androidx.test.uiautomator:uiautomator:2.4.1")
     }
 }
 
