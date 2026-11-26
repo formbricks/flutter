@@ -67,3 +67,6 @@ dependency-graph-reports/
 .fvm/
 
 apps/react-native-main/
+
+# Agent working files (local tickets from /to-tickets)
+.scratch/
