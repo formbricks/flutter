@@ -22,3 +22,5 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0002 (dates are parsed only in `fromJson` / `toJson`), but worth reopening because…_
+
+(Illustrative only: there is no ADR-0002 yet.)
